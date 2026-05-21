@@ -42,7 +42,9 @@ public class UserService {
         return token;
     }
 
-
+    public User findById(Long id) {
+        return mapper.findById(id);
+    }
 
 
 }

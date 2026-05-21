@@ -115,3 +115,8 @@ Authorization: Bearer this.is.a.fake.token.zzz
 ### 11. 没有 Bearer 前缀 —— 期望 code=401
 GET http://localhost:8000/api/resonators
 Authorization: {{token}}
+
+### 12. 访问/me
+GET http://localhost:8000/api/auth/me
+Authorization: Bearer {{token}}
+
