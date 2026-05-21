@@ -1,0 +1,17 @@
+# 8080 落在 Windows/Docker 保留端口段(8010-8109)里，bind 不了，故改 8000（不在任何保留段）
+server:
+  port: 8000
+
+spring:
+  application:
+    name: mc_recorder
+  datasource:
+    url: jdbc:mysql://localhost:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8
+    username: root
+    password: root123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  configuration:
+    map-underscore-to-camel-case: true
+

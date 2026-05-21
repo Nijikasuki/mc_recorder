@@ -1,0 +1,117 @@
+# 角色接口测试（受 JwtInterceptor 保护，必须带 token）
+#
+# 玩法：
+#   ① 先点最下方"0. 登录拿 token"——它会自动把 token 存到 {{token}}
+#   ② 之后点任何带 Authorization 的请求，{{token}} 自动展开成你的真 token
+#   ③ #0b 不带 token 故意访问，看 401 拦截效果
+
+############################################
+#  0. 登录拿 token（自动保存到 {{token}}）—— 第一步先跑这个
+############################################
+
+### 0. 登录 tester1 / 123456 —— 自动捕获 data 里的 JWT 到全局变量 token
+POST http://localhost:8000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester1",
+  "password": "123456"
+}
+
+> {%
+client.global.set("token", response.body.data);
+%}
+
+### 0b. 不带 token 访问 —— 期望 code=401, message=未登录或缺少 token（验证门卫生效）
+GET http://localhost:8000/api/resonators
+
+############################################
+#  正常路径（都带 Authorization）
+############################################
+
+### 1. 查列表 —— 期望 code=0，data 是数组
+GET http://localhost:8000/api/resonators
+Authorization: Bearer {{token}}
+
+### 2. 查单个（存在的 id）—— 期望 code=0，data 是对象
+GET http://localhost:8000/api/resonators/1
+Authorization: Bearer {{token}}
+
+### 3. 新增 —— 期望 code=0，data 里有自增回填的 id；createdAt 是北京时间
+POST http://localhost:8000/api/resonators
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "琳奈aaa",
+  "element": "衍射",
+  "star": 5,
+  "level": 80,
+  "resonanceChain": 0
+}
+
+### 4. 编辑（存在的 id，按需改成上一步返回的 id）—— 期望 code=0；updatedAt 自动刷新
+PUT http://localhost:8000/api/resonators/12
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "琳奈bbb",
+  "element": "衍射",
+  "star": 5,
+  "level": 80,
+  "resonanceChain": 1
+}
+
+### 5. 删除（存在的 id，按需调整）—— 期望 code=0，data=null
+DELETE http://localhost:8000/api/resonators/12
+Authorization: Bearer {{token}}
+
+############################################
+#  业务校验异常路径
+############################################
+
+### 6. 查不存在的 id —— 期望 code=404
+GET http://localhost:8000/api/resonators/99999
+Authorization: Bearer {{token}}
+
+### 7. 改不存在的 id —— 期望 code=404
+PUT http://localhost:8000/api/resonators/99999
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "幽灵",
+  "element": "衍射",
+  "star": 5,
+  "level": 1,
+  "resonanceChain": 0
+}
+
+### 8. 删不存在的 id —— 期望 code=404
+DELETE http://localhost:8000/api/resonators/99999
+Authorization: Bearer {{token}}
+
+### 9. 缺必填字段(level) —— 期望 code=400（@Valid 拦截）
+POST http://localhost:8000/api/resonators
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "残缺",
+  "element": "冷凝",
+  "star": 4,
+  "resonanceChain": 0
+}
+
+############################################
+#  鉴权失败路径
+############################################
+
+### 10. 假 token —— 期望 code=401, message=token 无效或已过期
+GET http://localhost:8000/api/resonators
+Authorization: Bearer this.is.a.fake.token.zzz
+
+### 11. 没有 Bearer 前缀 —— 期望 code=401
+GET http://localhost:8000/api/resonators
+Authorization: {{token}}

@@ -1,0 +1,11 @@
+### 测试 GET /wuwa
+GET http://localhost:8000/wuwa
+
+### 测试 GET /mc
+GET http://localhost:8000/mc
+
+### 测试 POST /echo
+POST http://localhost:8000/echo
+Content-Type: text/plain
+
+你好后端呃呃呃
