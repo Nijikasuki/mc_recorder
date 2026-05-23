@@ -1,0 +1,60 @@
+# Redis 玩具接口测试
+# 走完一轮后，整个 RedisTestController 就可以删了——它只是用来感受 RedisTemplate
+
+############################################
+#  0. 登录拿 token —— 第一步先跑
+############################################
+
+### 0. 登录 tester1
+POST http://localhost:8000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester1",
+  "password": "123456"
+}
+
+> {%
+client.global.set("token", response.body.data);
+%}
+
+############################################
+#  正常流程：set → get → delete → get
+#  value 改在 URL 问号后（@RequestParam）
+############################################
+
+### 1. 设值（带 30 秒 TTL）—— 注意 ?value= 在 URL 里
+POST http://localhost:8000/api/test/redis/hello?value=hello-redis
+Authorization: Bearer {{token}}
+
+### 2. 取值 —— 30 秒内能取到 "hello-redis"
+GET http://localhost:8000/api/test/redis/hello
+Authorization: Bearer {{token}}
+
+### 3. 取一个不存在的 key —— 期望 data 为 null
+GET http://localhost:8000/api/test/redis/nothing
+Authorization: Bearer {{token}}
+
+### 4. 删除
+DELETE http://localhost:8000/api/test/redis/hello
+Authorization: Bearer {{token}}
+
+### 5. 删除后再取 —— 期望 data 为 null
+GET http://localhost:8000/api/test/redis/hello
+Authorization: Bearer {{token}}
+
+############################################
+#  TTL 观察实验（手动跑）
+############################################
+
+### 6. 设一个会过期的 key
+POST http://localhost:8000/api/test/redis/ttl-demo?value=will-expire-in-30s
+Authorization: Bearer {{token}}
+
+### 7. 立刻取（< 30 秒）—— 能取到
+GET http://localhost:8000/api/test/redis/ttl-demo
+Authorization: Bearer {{token}}
+
+### 8. 等 30+ 秒后再取 —— 期望 data 变 null ⭐ TTL 自动消失，亲眼见证
+GET http://localhost:8000/api/test/redis/ttl-demo
+Authorization: Bearer {{token}}

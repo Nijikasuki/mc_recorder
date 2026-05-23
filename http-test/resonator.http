@@ -43,8 +43,8 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "琳奈",
-  "element": "衍射",
+  "name": "爱米斯a",
+  "element": "热熔",
   "star": 5,
   "level": 80,
   "resonanceChain": 0

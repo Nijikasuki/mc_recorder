@@ -20,7 +20,6 @@ public class ResonatorController {
     // 依赖 Service（不再直接碰 Mapper）。Spring 启动时把 ResonatorService Bean 注进来
     private final ResonatorService service;
 
-    @Autowired   // 单构造方法时可省略，显式写出便于理解"依赖注入"
     public ResonatorController(ResonatorService service) {
         this.service = service;
     }

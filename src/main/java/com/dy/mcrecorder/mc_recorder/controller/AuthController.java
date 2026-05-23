@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
     private final UserService service;
 
-    @Autowired
     public AuthController(UserService service) {
         this.service = service;
     }
