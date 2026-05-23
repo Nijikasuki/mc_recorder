@@ -20,26 +20,26 @@ import java.util.List;
 public interface ResonatorMapper {
 
     // 查全部：返回 List<Resonator>，MyBatis 把每行映射成一个对象塞进 List
-    @Select("SELECT * FROM resonator")
-    List<Resonator> findAll();
+    @Select("SELECT * FROM resonator WHERE owner_id=#{ownerId}")
+    List<Resonator> findAll(Long ownerId);
 
     // 按 id 查一条：查到返回对象，查不到返回 null
-    @Select("SELECT * FROM resonator WHERE id = #{id}")
-    Resonator findById(Long id);
+    @Select("SELECT * FROM resonator WHERE id = #{id} AND owner_id = #{ownerId}")
+    Resonator findById(@Param("id") Long id,@Param("ownerId") Long ownerId);
 
     // 新增：SQL 里不写 id（自增）、created_at/updated_at（数据库默认值）
     // @Options(useGeneratedKeys=true, keyProperty="id")：
     //   把数据库生成的自增主键，回填到传入对象的 id 字段
     //   —— 调用后该对象就带着新 id（上层据此把新 id 返回给前端）
-    @Insert("INSERT INTO resonator (name, element, star, level, resonance_chain) VALUES (#{name}, #{element}, #{star}, #{level}, #{resonanceChain})")
+    @Insert("INSERT INTO resonator (owner_id,name, element, star, level, resonance_chain) VALUES (#{ownerId},#{name}, #{element}, #{star}, #{level}, #{resonanceChain})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Resonator resonator);   // 返回值 = 受影响行数（成功为 1）
 
     // 编辑：只更新业务字段，updated_at 由数据库 ON UPDATE 自动刷新
     // 单参数(Resonator)，所以 #{name}/#{id} 都自动从这一个对象取（多参数会绑定失败）
-    @Update("UPDATE resonator SET name=#{name}, element=#{element}, star=#{star}, level=#{level}, resonance_chain=#{resonanceChain} WHERE id = #{id}")
+    @Update("UPDATE resonator SET name=#{name}, element=#{element}, star=#{star}, level=#{level}, resonance_chain=#{resonanceChain} WHERE id = #{id} and owner_id = #{ownerId}")
     int update(Resonator resonator);
 
-    @Delete("DELETE FROM resonator WHERE id = #{id}")
-    int delete(Long id);
+    @Delete("DELETE FROM resonator WHERE id = #{id} and owner_id = #{ownerId}")
+    int delete(@Param("id") Long id,@Param("ownerId") Long ownerId);
 }

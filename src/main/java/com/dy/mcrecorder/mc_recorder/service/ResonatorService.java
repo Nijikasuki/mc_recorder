@@ -23,12 +23,12 @@ public class ResonatorService {
     // Service 当前的价值是「占好业务逻辑的位置」，
     // 等做数据校验/复杂规则时，逻辑就往这些方法里填（比如 update 前先查存在性）。
 
-    public List<Resonator> findAll() {
-        return mapper.findAll();
+    public List<Resonator> findAll(Long userId) {
+        return mapper.findAll(userId);
     }
 
-    public Resonator findById(Long id) {
-        return mapper.findById(id);
+    public Resonator findById(Long id, Long userId) {
+        return mapper.findById(id,userId);
     }
 
     public Resonator create(Resonator resonator) {
@@ -41,8 +41,8 @@ public class ResonatorService {
         return affectedRows > 0;
     }
 
-    public boolean delete(Long id) {
-        int affectedRows = mapper.delete(id);
+    public boolean delete(Long id, Long userId) {
+        int affectedRows = mapper.delete(id,userId);
         return affectedRows > 0;
     }
 }

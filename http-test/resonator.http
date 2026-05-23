@@ -43,7 +43,7 @@ Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "琳奈aaa",
+  "name": "琳奈",
   "element": "衍射",
   "star": 5,
   "level": 80,
@@ -119,4 +119,79 @@ Authorization: {{token}}
 ### 12. 访问/me
 GET http://localhost:8000/api/auth/me
 Authorization: Bearer {{token}}
+
+############################################
+#  数据归属（owner_id）测试 —— 多用户隔离
+#  前置：先跑 #0（tester1 登录） + #3（tester1 创建一个角色，记下返回的 id）
+#  下面把 #16-#18 里的 id=1 按实际改
+############################################
+
+### 13. 注册 tester2 —— 期望 code=0（已存在则 400 也无妨）
+POST http://localhost:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "tester2",
+  "password": "123456"
+}
+
+### 14. tester2 登录 —— 自动捕获 token 到 {{token2}}
+POST http://localhost:8000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester2",
+  "password": "123456"
+}
+
+> {%
+client.global.set("token2", response.body.data);
+%}
+
+### 15. tester2 查列表 —— 期望 data=[]（tester1 的角色 tester2 看不到）⭐ 数据归属核心证据
+GET http://localhost:8000/api/resonators
+Authorization: Bearer {{token2}}
+
+### 16. tester2 想看 tester1 的角色（id=1，按需改）—— 期望 code=404 "角色不存在"
+GET http://localhost:8000/api/resonators/1
+Authorization: Bearer {{token2}}
+
+### 17. tester2 想改 tester1 的角色 —— 期望 code=404 "未成功更新"⭐ 防越权改
+PUT http://localhost:8000/api/resonators/1
+Content-Type: application/json
+Authorization: Bearer {{token2}}
+
+{
+  "name": "黑客修改",
+  "element": "导电",
+  "star": 5,
+  "level": 1,
+  "resonanceChain": 0
+}
+
+### 18. tester2 想删 tester1 的角色 —— 期望 code=404 "未成功删除"⭐ 防越权删
+DELETE http://localhost:8000/api/resonators/1
+Authorization: Bearer {{token2}}
+
+### 19. tester2 创建自己的角色 —— 期望 code=0，data.ownerId 是 tester2 的 id
+POST http://localhost:8000/api/resonators
+Content-Type: application/json
+Authorization: Bearer {{token2}}
+
+{
+  "name": "tester2的角色",
+  "element": "湮灭",
+  "star": 5,
+  "level": 1,
+  "resonanceChain": 0
+}
+
+### 20. tester2 再查列表 —— 期望只看到 #19 那一条
+GET http://localhost:8000/api/resonators
+Authorization: Bearer {{token2}}
+
+### 21. 切回 tester1 查列表 —— 期望看不到 tester2 那条，只有自己的 ⭐ 双向隔离
+GET http://localhost:8000/api/resonators
+Authorization: Bearer {{token}}
+
 

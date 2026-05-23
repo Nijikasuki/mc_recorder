@@ -6,11 +6,10 @@ import com.dy.mcrecorder.mc_recorder.dto.LoginRequest;
 import com.dy.mcrecorder.mc_recorder.dto.RegisterRequest;
 import com.dy.mcrecorder.mc_recorder.dto.UserResponse;
 import com.dy.mcrecorder.mc_recorder.entity.User;
-import com.dy.mcrecorder.mc_recorder.mapper.UserMapper;
 import com.dy.mcrecorder.mc_recorder.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -42,8 +41,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public Result<UserResponse> me() {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    public Result<UserResponse> me(@AuthenticationPrincipal Long userId) {
         User dbuser = service.findById(userId);
         UserResponse user = new UserResponse();
         user.setId(dbuser.getId());

@@ -24,6 +24,8 @@ public class Resonator {
     // 整数全用包装类(Long/Integer)不用基本类型(long/int)：包装类能为 null，数据库列可能是 NULL
     private Long id;                    // 对应列 id（自增主键，新增时不用填）
 
+    private Long ownerId;
+
     @NotBlank(message="名字不能为空")
     private String name;                // 对应列 name
 
