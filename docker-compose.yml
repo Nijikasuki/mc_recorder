@@ -1,0 +1,94 @@
+# 一键编排：mysql + redis + 你的应用，三个容器同时启动并联网
+# 启动：docker compose up -d
+# 停止：docker compose down  (容器删，数据卷保留)
+# 看日志：docker compose logs -f app
+
+services:
+
+  # ============================================================
+  # 服务 1：MySQL  (已写好做模板)
+  # ============================================================
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-wuwa
+    restart: unless-stopped              # 容器异常退出自动重启
+    environment:
+      MYSQL_ROOT_PASSWORD: root123       # 等价于 docker run 的 -e
+      MYSQL_DATABASE: wuwa_record
+      TZ: Asia/Shanghai
+    command: --default-time-zone=+08:00  # 启动命令的额外参数
+    ports:
+      - "3306:3306"                      # 宿主:容器
+    volumes:
+      - wuwa_mysql_data:/var/lib/mysql   # 挂载下面声明的卷
+
+
+  # ============================================================
+  # 服务 2：Redis  (TODO 你写)
+  # ============================================================
+  # 字段（对照 mysql 段照葫芦画瓢）：
+  #   image:           redis:7
+  #   container_name:  redis-wuwa
+  #   restart:         unless-stopped
+  #   ports:           6379:6379
+  # 不需要 environment / command / volumes —— 缓存不用持久化、不用配密码
+  #
+  # 注意 YAML 缩进：每层 2 空格，对齐 mysql 段
+  #
+  # ↓↓↓ 你在这下面写 redis 段 ↓↓↓
+  redis:
+    image: redis:7
+    container_name: redis-wuwa
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # ============================================================
+  # 服务 3：App  你的应用 (TODO 你写)
+  # ============================================================
+  # 字段：
+  #   image:           mc_recorder:latest          ← 你刚 build 的镜像
+  #   container_name:  mc_recorder-app
+  #   restart:         unless-stopped
+  #   ports:           8000:8000
+  #
+  #   depends_on:                                   ← 列表语法，控制启动顺序
+  #     - mysql
+  #     - redis
+  #
+  #   environment:                                  ← 关键！覆盖 application.yaml 里的主机名
+  #     # URL 含 & 必须单引号包，否则 YAML 解析会出错
+  #     SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
+  #     SPRING_DATASOURCE_USERNAME: root
+  #     SPRING_DATASOURCE_PASSWORD: root123
+  #     SPRING_DATA_REDIS_HOST: redis              ← 这里写"服务名 redis"，不是 localhost！
+  #     SPRING_DATA_REDIS_PORT: 6379
+  #
+  # ↓↓↓ 你在这下面写 app 段 ↓↓↓
+  app:
+    image: mc_recorder:latest
+    container_name: mc_recorder-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      - mysql
+      - redis
+
+    environment:
+      SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root123
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+
+
+
+# ============================================================
+# 顶层 volumes 声明：复用你已有的卷，老数据保留
+# ============================================================
+volumes:
+  wuwa_mysql_data:
+    external: true                       # 用外部已存在的卷，不要新建
