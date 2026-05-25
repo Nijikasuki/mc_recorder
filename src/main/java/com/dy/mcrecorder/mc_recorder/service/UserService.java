@@ -1,5 +1,6 @@
 package com.dy.mcrecorder.mc_recorder.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dy.mcrecorder.mc_recorder.common.JwtUtil;
 import com.dy.mcrecorder.mc_recorder.entity.User;
 import com.dy.mcrecorder.mc_recorder.mapper.UserMapper;
@@ -19,7 +20,9 @@ public class UserService {
     }
 
     public boolean register(User user) {
-        if(mapper.findByUsername(user.getUsername()) != null){
+        LambdaQueryWrapper<User> q = new LambdaQueryWrapper<>();
+        q.eq(User::getUsername, user.getUsername());
+        if(mapper.selectOne(q) != null){
             return false;
         }
         else{
@@ -31,7 +34,9 @@ public class UserService {
     }
 
     public String login(User user) {
-        User dbUser = mapper.findByUsername(user.getUsername());
+        LambdaQueryWrapper<User> q = new LambdaQueryWrapper<User>();
+        q.eq(User::getUsername, user.getUsername());
+        User dbUser = mapper.selectOne(q);
         if(dbUser == null){
             return null; //用户不存在
         }
@@ -43,8 +48,7 @@ public class UserService {
     }
 
     public User findById(Long id) {
-        return mapper.findById(id);
+        return mapper.selectById(id);
     }
-
 
 }

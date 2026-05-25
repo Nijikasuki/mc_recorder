@@ -1,5 +1,8 @@
 package com.dy.mcrecorder.mc_recorder.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dy.mcrecorder.mc_recorder.entity.Resonator;
 import com.dy.mcrecorder.mc_recorder.mapper.ResonatorMapper;
 import org.springframework.cache.annotation.CacheEvict;
@@ -25,42 +28,42 @@ public class ResonatorService {
     // 等做数据校验/复杂规则时，逻辑就往这些方法里填（比如 update 前先查存在性）。
     @Cacheable(value = "resonators",key = "#userId")
     public List<Resonator> findAll(Long userId) {
-//        String key = cacheKey(userId);
-//        String cached = redisTemplate.opsForValue().get(key);
-//        if (cached != null) {
-//            return objectMapper.readValue(cached, new TypeReference<List<Resonator>>() {});
-//        }
-//        List<Resonator> list = mapper.findAll(userId);
-//
-//        String json = objectMapper.writeValueAsString(list);
-//        redisTemplate.opsForValue().set(key,json, CACHE_TTL);
-//        return list;
-        return mapper.findAll(userId);
+        LambdaQueryWrapper<Resonator> q = new LambdaQueryWrapper<>();
+        q.eq(Resonator::getOwnerId,userId);
+        return mapper.selectList(q);
     }
 
     public Resonator findById(Long id, Long userId) {
-        return mapper.findById(id,userId);
+        LambdaQueryWrapper<Resonator> q = new LambdaQueryWrapper<>();
+        q.eq(Resonator::getId,id).eq(Resonator::getOwnerId,userId);
+        return mapper.selectOne(q);
     }
+
     @CacheEvict(value = "resonators", key = "#resonator.ownerId")
     public Resonator create(Resonator resonator) {
         mapper.insert(resonator);
-//        redisTemplate.delete(cacheKey(resonator.getOwnerId()));
         return resonator;
     }
+
     @CacheEvict(value = "resonators", key = "#resonator.ownerId")
     public boolean update(Resonator resonator) {
-        int affectedRows = mapper.update(resonator);
-//        if (affectedRows > 0) {
-//            redisTemplate.delete(cacheKey(resonator.getOwnerId()));   // ← 加这行（只在真改到了才清）
-//        }
+        LambdaUpdateWrapper<Resonator> u = new LambdaUpdateWrapper<>();
+        u.eq(Resonator::getId,resonator.getId()).eq(Resonator::getOwnerId,resonator.getOwnerId());
+        int affectedRows = mapper.update(resonator,u);
         return affectedRows > 0;
     }
     @CacheEvict(value = "resonators", key = "#userId")
     public boolean delete(Long id, Long userId) {
-        int affectedRows = mapper.delete(id,userId);
-//        if (affectedRows > 0) {
-//            redisTemplate.delete(cacheKey(userId));   // ← 加这行（只在真改到了才清）关于"affectedRows > 0 才清".注解版不再有这个微优化——@CacheEvict 默认方法成功执行后就清，不看返回值。对学习项目无所谓，少一行判断更干净。
-//        }
+        LambdaQueryWrapper<Resonator> q = new LambdaQueryWrapper<>();
+        q.eq(Resonator::getId,id).eq(Resonator::getOwnerId,userId);
+        int affectedRows = mapper.delete(q);
         return affectedRows > 0;
+    }
+
+    public Page<Resonator> findPage(int pageNo, int pageSize, Long userId) {
+        Page<Resonator> page = new Page<>(pageNo, pageSize);
+        LambdaQueryWrapper<Resonator> q = new LambdaQueryWrapper<>();
+        q.eq(Resonator::getOwnerId,userId);
+        return mapper.selectPage(page,q);
     }
 }

@@ -9,7 +9,10 @@
       "Bash(findstr 8080)",
       "Bash(findstr LISTENING)",
       "Bash(findstr 808)",
-      "Bash(docker exec *)"
+      "Bash(docker exec *)",
+      "Read(//c/Users/Administrator/.m2/repository/**)",
+      "Read(//c/Users/Administrator/.m2/repository/com/baomidou//**)",
+      "Bash(unzip *)"
     ]
   }
 }

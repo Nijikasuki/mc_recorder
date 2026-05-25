@@ -1,5 +1,6 @@
 package com.dy.mcrecorder.mc_recorder.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.dy.mcrecorder.mc_recorder.entity.Resonator;
 import org.apache.ibatis.annotations.*;
 
@@ -17,8 +18,8 @@ import java.util.List;
 //   ${xxx} 危险（字符串拼接）—— 只用于动态表名/列名
 //   单个对象参数时，#{name} 自动取 resonator.getName()
 @Mapper
-public interface ResonatorMapper {
-
+public interface ResonatorMapper extends BaseMapper<Resonator> {
+    /*
     // 查全部：返回 List<Resonator>，MyBatis 把每行映射成一个对象塞进 List
     @Select("SELECT * FROM resonator WHERE owner_id=#{ownerId}")
     List<Resonator> findAll(Long ownerId);
@@ -42,4 +43,6 @@ public interface ResonatorMapper {
 
     @Delete("DELETE FROM resonator WHERE id = #{id} and owner_id = #{ownerId}")
     int delete(@Param("id") Long id,@Param("ownerId") Long ownerId);
+    */
+
 }

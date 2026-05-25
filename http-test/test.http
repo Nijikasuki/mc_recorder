@@ -1,0 +1,32 @@
+POST http://localhost:8000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester1",
+  "password": "123456"
+}
+
+> {%
+    client.global.set("token", response.body.data);
+%}
+
+### 1. 查列表 —— 期望 code=0，data 是数组
+GET http://localhost:8000/api/resonators
+Authorization: Bearer {{token}}
+
+### 2. 查单个（存在的 id）—— 期望 code=0，data 是对象
+GET http://localhost:8000/api/resonators/1
+Authorization: Bearer {{token}}
+
+### 3. 新增 —— 期望 code=0，data 里有自增回填的 id；createdAt 是北京时间
+POST http://localhost:8000/api/resonators
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "测试",
+  "element": "热熔",
+  "star": 5,
+  "level": 80,
+  "resonanceChain": 0
+}

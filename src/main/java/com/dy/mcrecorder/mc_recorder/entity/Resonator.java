@@ -1,5 +1,8 @@
 package com.dy.mcrecorder.mc_recorder.entity;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -21,10 +24,12 @@ import java.time.LocalDateTime;
 //   - Jackson 序列化/反序列化 JSON 时用 getter/setter
 @Data
 @Schema(description = "共鸣者（角色）")
+@TableName("resonator")
 public class Resonator {
 
     // 整数全用包装类(Long/Integer)不用基本类型(long/int)：包装类能为 null，数据库列可能是 NULL
     @Schema(description = "主键 ID（新增时不填，数据库自增）", accessMode = Schema.AccessMode.READ_ONLY)
+    @TableId(type = IdType.AUTO)
     private Long id;                    // 对应列 id（自增主键，新增时不用填）
 
     @Schema(description = "归属用户 ID（后端自动填，请求里不要传）", hidden = true)

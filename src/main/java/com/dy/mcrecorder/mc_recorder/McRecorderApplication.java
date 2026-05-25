@@ -1,6 +1,5 @@
 package com.dy.mcrecorder.mc_recorder;
-
-import com.dy.mcrecorder.mc_recorder.entity.Resonator;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -10,6 +9,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 //   3. 开启组件扫描（扫描本包及子包下的 @RestController/@Mapper 等，注册成 Bean）
 //      —— 所以新建的类必须放在 com.dy.mcrecorder.mc_recorder 包或其子包下
 @SpringBootApplication
+@MapperScan("com.dy.mcrecorder.mc_recorder.mapper")
 public class McRecorderApplication {
 
     // main 是 static：JVM 启动时还没有任何对象，只能用 类名.main() 调用，所以必须 static

@@ -1,5 +1,6 @@
 package com.dy.mcrecorder.mc_recorder.controller;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.dy.mcrecorder.mc_recorder.common.Result;
 import com.dy.mcrecorder.mc_recorder.entity.Resonator;
 import com.dy.mcrecorder.mc_recorder.service.ResonatorService;
@@ -72,5 +73,11 @@ public class ResonatorController {
     public Result<Void> delete(@PathVariable Long id, @AuthenticationPrincipal Long userId) {
         boolean ok = service.delete(id,userId);
         return ok ? Result.success():Result.fail(404,"未成功删除");
+    }
+
+    @GetMapping("/page")
+    @Operation(summary = "分页查询我的角色列表", description = "pageNum 默认 1，pageSize 默认 10")
+    public Result<Page<Resonator>> getPage(@RequestParam(defaultValue = "1") int pageNum, @RequestParam(defaultValue = "10") int pageSize, @AuthenticationPrincipal Long userId) {
+        return Result.success(service.findPage(pageNum,pageSize,userId));
     }
 }
