@@ -1,6 +1,7 @@
 package com.dy.mcrecorder.mc_recorder.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -16,4 +17,9 @@ public class RegisterRequest {
     @NotBlank(message = "密码不能为空")
     @Size(min=6,message = "密码至少6位")
     private String password;
+
+    @Schema(description = "邮箱", example = "tester@example.com")
+    @NotBlank(message = "邮箱不能为空")
+    @Email(message = "邮箱格式不对")
+    private String email;
 }

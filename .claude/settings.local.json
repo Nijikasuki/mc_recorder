@@ -12,7 +12,9 @@
       "Bash(docker exec *)",
       "Read(//c/Users/Administrator/.m2/repository/**)",
       "Read(//c/Users/Administrator/.m2/repository/com/baomidou//**)",
-      "Bash(unzip *)"
+      "Bash(unzip *)",
+      "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/amqp/spring-amqp/4.0.3/spring-amqp-4.0.3.jar org.springframework.amqp.support.converter.JacksonJsonMessageConverter)",
+      "Bash(findstr rabbit *)"
     ]
   }
 }

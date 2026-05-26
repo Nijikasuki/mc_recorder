@@ -18,6 +18,8 @@ public class User {
 
     private String password;
 
+    private String email;
+
     private LocalDateTime createdAt;    // 对应列 created_at
     private LocalDateTime updatedAt;    // 对应列 updated_at
 }

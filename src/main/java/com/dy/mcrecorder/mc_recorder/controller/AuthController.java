@@ -31,6 +31,7 @@ public class AuthController {
         User user = new User();
         user.setUsername(registerRequest.getUsername());
         user.setPassword(registerRequest.getPassword());
+        user.setEmail(registerRequest.getEmail());
         boolean ok =  service.register(user);
         return ok ? Result.success() : Result.fail(400,"用户名已存在");
     }

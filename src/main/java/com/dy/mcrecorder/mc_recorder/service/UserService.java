@@ -2,21 +2,26 @@ package com.dy.mcrecorder.mc_recorder.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.dy.mcrecorder.mc_recorder.common.JwtUtil;
+import com.dy.mcrecorder.mc_recorder.dto.RegisterRequest;
+import com.dy.mcrecorder.mc_recorder.dto.UserRegisteredEvent;
 import com.dy.mcrecorder.mc_recorder.entity.User;
 import com.dy.mcrecorder.mc_recorder.mapper.UserMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
 
 @Service
 public class UserService {
     private final UserMapper mapper;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
+    private final WelcomeEmailProducer producer;
 
-    public UserService(UserMapper mapper, PasswordEncoder encoder, JwtUtil jwtUtil) {
+    public UserService(UserMapper mapper, PasswordEncoder encoder, JwtUtil jwtUtil,WelcomeEmailProducer producer) {
         this.mapper = mapper;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
+        this.producer = producer;
     }
 
     public boolean register(User user) {
@@ -29,6 +34,7 @@ public class UserService {
             String hash = encoder.encode(user.getPassword());
             user.setPassword(hash);
             mapper.insert(user);
+            producer.sendWelcome(new UserRegisteredEvent(user.getUsername(), user.getEmail()));
             return true;
         }
     }

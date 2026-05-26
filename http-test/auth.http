@@ -117,3 +117,43 @@ Content-Type: application/json
   "username": "tester1",
   "password": "123"
 }
+
+
+### 12. 注册带邮箱的新用户 —— 期望 code=0
+POST http://localhost:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "mqmailtest1",
+  "password": "123456",
+  "email": "mailtest1@example.com"
+}
+
+### 13. 注册-邮箱格式错 —— 期望 code=400, message=邮箱格式不对（@Email 拦截）
+POST http://localhost:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "badmail",
+  "password": "123456",
+  "email": "not-an-email"
+}
+
+### 14. 注册-缺邮箱字段 —— 期望 code=400, message=邮箱不能为空（@NotBlank 拦截）
+POST http://localhost:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "noemail",
+  "password": "123456"
+}
+
+### 15. 注册-邮箱为空字符串 —— 同 #14，code=400, message=邮箱不能为空
+POST http://localhost:8000/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "emptyemail",
+  "password": "123456",
+  "email": ""
+}
