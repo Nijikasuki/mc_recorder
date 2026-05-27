@@ -1,0 +1,32 @@
+### 0. 登录 tester1 / 123456 —— 自动捕获 data 里的 JWT 到全局变量 token
+POST http://localhost:8000/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester1",
+  "password": "123456"
+}
+
+> {%
+    client.global.set("token", response.body.data);
+%}
+
+### 1. 第一次和 AI 对话
+POST http://localhost:8000/api/ai/chat?message=你好,介绍一下你自己
+Authorization: Bearer {{token}}
+
+### 2. 鸣潮相关问题（看智谱知不知道）
+POST http://localhost:8000/api/ai/chat?message=鸣潮里的"琳奈"是什么属性的角色?
+Authorization: Bearer {{token}}
+
+### 3. 让 AI 看到我的角色再建议
+POST http://localhost:8000/api/ai/chat?message=我目前拥有哪些角色?
+Authorization: Bearer {{token}}
+
+### 4. 个性化养成建议
+POST http://localhost:8000/api/ai/chat?message=根据我已有的角色, 你建议我重点培养谁?为什么?
+Authorization: Bearer {{token}}
+
+### 5. 对比测试: 这个问题不需要工具
+POST http://localhost:8000/api/ai/chat?message=Java 和 Python 有什么区别?
+Authorization: Bearer {{token}}

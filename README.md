@@ -33,15 +33,19 @@
 
 ### 进行中
 
-- **RabbitMQ 业务接入**：注册成功 → 发事件到 MQ → Consumer 异步「假装发欢迎邮件」（学 MQ 解耦 + 异步模式）
+- **AI 助手第一遍 - Spring AI**（main 分支）：
+  - ✅ 基础聊天（智谱 GLM-4-flash）
+  - ✅ Tool Calling（LLM 主动调 `getMyResonators` 看用户真实角色）
+  - 🚧 下一步：ChatMemory 多轮对话
+  - ⏳ 之后：RAG 鸣潮百科 / MCP 探索
 
 ### 计划
 
+- AI 第二遍：Python LangChain 微服务版（python-microservice 分支）
 - 抽卡记录管理（gacha 模块）
 - 个人统计可视化页面
 - 全文搜索（Elasticsearch：角色模糊搜 + 日志聚合）
-- **AI 助手**（Spring AI：聊天 + RAG + Tool calling 调用项目接口给个性化建议）
-- Vue3 前端
+- **Vue3 前端**（终篇——所有功能整合到一个像样的 web UI）
 
 ---
 
@@ -253,24 +257,49 @@ docker-compose.yml                   多容器编排
 | 8 | Docker Compose 部署上线 | ✅ 完成 |
 | 9 | Swagger / SpringDoc API 文档 | ✅ 完成 |
 | 10 | MyBatis-Plus 重构 + 分页插件 | ✅ 完成 |
-| 11 | RabbitMQ：基础设施 + 注册异步发欢迎邮件 | 🚧 进行中 |
-| 12 | Elasticsearch 搜索 | ⏳ 计划中 |
-| 13 | Spring AI Agent（项目灵魂功能）| ⏳ 计划中 |
-| 14 | Vue3 前端 | ⏳ 计划中 |
+| 11 | RabbitMQ：基础设施 + 注册异步发欢迎邮件 | ✅ 完成 |
+| 12 | AI - Spring AI 基础（聊天 + Tool Calling）| ✅ 完成 |
+| 13 | AI - Spring AI 多轮对话（ChatMemory）| 🚧 下一站 |
+| 14 | AI - Spring AI 知识库（RAG）| ⏳ 计划中 |
+| 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
+| 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
+| 17 | Elasticsearch 搜索 | ⏳ 计划中 |
+| 18 | **Vue3 前端（终篇）**| ⏳ 计划中 |
 
 每个阶段都以「先理解概念 → 在项目里实战 → 留下能 git 回看的实例」为标准。
 
 ---
 
-## AI 助手设想（项目压轴功能）+ 与 MQ 的关联
+## AI 助手（项目压轴功能）—— 两遍法路线
 
-最终的 AI 助手将具备三层能力：
+### 能力目标（最终形态）
 
 1. **基础聊天** — 用户能直接和 LLM 对话讨论养成思路
 2. **RAG（检索增强生成）** — 把鸣潮的角色技能 / 武器 / 声骸数据做成向量库，AI 回答时引用具体数据，不瞎编
 3. **Tool calling（真 Agent）** — LLM 主动调用 `/api/resonators` 等接口，看到用户**真实拥有**的角色，给出个性化建议
 
-**和 MQ 的联动**：LLM 调用通常很慢（5-10 秒），未来 AI 助手会**复用现在搭的 RabbitMQ 基础设施**——
+### 学习路线：两遍法 + 分支隔离
+
+用户背景：**Python + LangChain 已会**（属于舒适区），**Java/Spring 是当前学习重点**。两个角度都做：
+
+#### 第一遍：Spring AI（**main 分支**）
+
+- 在当前 Spring Boot 项目里加 Spring AI starter，直接集成
+- 学到「Java 后端怎么集成 AI」——求职 Java 岗的实操能力
+- 选 `spring-ai-starter-model-openai`（OpenAI 兼容协议，可调 OpenAI / DeepSeek / 智谱 / Ollama 等多家）
+- 预计 2-3 个 session 出能用的 AI 功能
+
+#### 第二遍：Python LangChain 微服务（**python-microservice 分支**）
+
+- Spring AI 完成后 commit + 打 tag → 从 main 切新分支
+- 在新分支拆出独立 Python FastAPI 服务，跑 LangChain
+- Java 端改成 HTTP 或复用 RabbitMQ 调 Python 服务
+- 学到「微服务架构 + 跨语言通信」——业界真实样子
+- 预计 2-3 个 session 完成迁移
+
+### 与 MQ 的联动
+
+LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ 基础设施**：
 
 ```
 用户提问 → Controller 收到 → 发"AI 提问"事件到 MQ → 立刻返回"正在思考"
@@ -282,9 +311,19 @@ docker-compose.yml                   多容器编排
                                        结果存数据库 / 推送给前端
 ```
 
-**MqConstants 里预留事件类型**（如 `ai.question.asked`），新增 AI 事件只是加 Queue + Binding + Consumer，不动现有基础设施。这就是「共享 Exchange + 多 Queue」架构的远期价值——**今天为欢迎邮件搭的，明天 AI 直接复用**。
+**MqConstants 里可预留事件类型**（如 `ai.question.asked`），新增 AI 事件只是加 Queue + Binding + Consumer，不动现有基础设施。这就是「共享 Exchange + 多 Queue」架构的远期价值——**今天为欢迎邮件搭的，明天 AI 直接复用**。
 
-技术选型：Spring AI（备选 LangChain4j）。
+第二遍 Python 微服务方案中，**Java ↔ Python 通信也可走 RabbitMQ**（Java 发 → Python Consumer 拉 → 处理 → 结果回写），就是上面这个图，只是消息消费方变成 Python。
+
+### LLM 提供商
+
+候选（**真正调 API 时再定**）：
+- **DeepSeek**：便宜 + 中文好 + OpenAI 兼容协议，国内项目首选
+- **Anthropic Claude**：质量最高，新用户 $5 免费额度（需国外卡）
+- **Ollama 本地**：完全免费，需本机 16GB+ 内存
+- **OpenAI**：最主流，国内访问不稳
+
+技术选型已定：**Spring AI（第一遍） + LangChain Python（第二遍）**。
 
 ---
 
