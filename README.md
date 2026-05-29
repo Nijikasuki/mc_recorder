@@ -36,8 +36,9 @@
 - **AI 助手第一遍 - Spring AI**（main 分支）：
   - ✅ 基础聊天（智谱 GLM-4-flash）
   - ✅ Tool Calling（LLM 主动调 `getMyResonators` 看用户真实角色）
-  - 🚧 下一步：ChatMemory 多轮对话
-  - ⏳ 之后：RAG 鸣潮百科 / MCP 探索
+  - ✅ ChatMemory 多轮对话（MySQL 持久化 + 装饰器绕开 milestone bug）
+  - 🚧 下一步：RAG 鸣潮百科
+  - ⏳ 之后：MCP 探索
 
 ### 计划
 
@@ -60,6 +61,7 @@
 | 缓存 | Redis 7（Docker） + Spring Cache 抽象 |
 | 消息队列 | RabbitMQ 3-management（Docker） |
 | API 文档 | SpringDoc OpenAPI 2.8.13 |
+| AI 集成 | Spring AI 2.0.0-M8（OpenAI 兼容协议 → 智谱 GLM-4-flash） |
 | 部署 | Docker / Docker Compose |
 | 构建 | Maven Wrapper |
 | 工具 | Lombok / Jackson 3 |
@@ -69,7 +71,6 @@
 | 阶段 | 技术 |
 |------|------|
 | 搜索 | Elasticsearch |
-| AI 集成 | Spring AI（备选 LangChain4j） |
 | 前端 | Vue3 + axios |
 
 ---
@@ -211,10 +212,12 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── CacheConfig                  Redis 缓存配置（TTL / 序列化）
 │   ├── MybatisPlusConfig            MyBatis-Plus 分页插件配置
 │   ├── OpenApiConfig                Swagger Bearer JWT 集成
-│   └── RabbitMqConfig               RabbitMQ Queue / Exchange / Binding 声明 + JSON 消息转换器
+│   ├── RabbitMqConfig               RabbitMQ Queue / Exchange / Binding 声明 + JSON 消息转换器
+│   └── TextOnlyChatMemoryRepository 装饰器：包装 JdbcChatMemoryRepository，过滤 tool 消息绕开 Spring AI M7/M8 bug
 ├── controller/
 │   ├── AuthController               注册 / 登录 / 当前用户
-│   └── ResonatorController          角色 CRUD + 分页
+│   ├── ResonatorController          角色 CRUD + 分页
+│   └── AiController                 AI 聊天入口（含多轮对话 + Tool Calling）
 ├── dto/
 │   ├── RegisterRequest              注册请求（含 @Email 邮箱字段）
 │   ├── LoginRequest                 登录请求
@@ -232,7 +235,9 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
     ├── UserService                  注册 / 登录 / 查询
     ├── ResonatorService             角色业务 + LambdaQueryWrapper
     ├── WelcomeEmailProducer         MQ 生产者
-    └── WelcomeEmailConsumer         MQ 消费者（@RabbitListener）
+    ├── WelcomeEmailConsumer         MQ 消费者（@RabbitListener）
+    ├── AiService                    ChatClient + ChatMemory + Advisor + Tool Calling
+    └── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
 
 http-test/                           各业务测试用例（IDEA HTTP Client）
 Dockerfile                           应用镜像构建
@@ -259,8 +264,8 @@ docker-compose.yml                   多容器编排
 | 10 | MyBatis-Plus 重构 + 分页插件 | ✅ 完成 |
 | 11 | RabbitMQ：基础设施 + 注册异步发欢迎邮件 | ✅ 完成 |
 | 12 | AI - Spring AI 基础（聊天 + Tool Calling）| ✅ 完成 |
-| 13 | AI - Spring AI 多轮对话（ChatMemory）| 🚧 下一站 |
-| 14 | AI - Spring AI 知识库（RAG）| ⏳ 计划中 |
+| 13 | AI - Spring AI 多轮对话（ChatMemory）| ✅ 完成 |
+| 14 | AI - Spring AI 知识库（RAG）| 🚧 下一站 |
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
 | 17 | Elasticsearch 搜索 | ⏳ 计划中 |
@@ -331,9 +336,15 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 
 > 这里可以随时加新想法，实现后挪到上面的「已完成」。
 
-- 待添加：
-- 待添加：
-- 待添加：
+- **业界硬化项（路上择机加，别一次做完）**：
+  - API key 走环境变量 / `.env` 文件（当前 `application.yaml` 里硬编码）
+  - AI 调用流式输出（SSE / EventSource）——配合 Vue 前端一起做
+  - AI 调用 token 用量追踪（每次调用记 promptTokens / completionTokens，做成本可见性）
+  - LLM API 熔断 / 重试 / 限流（Resilience4j）
+  - 可观测性：Prometheus + Micrometer 指标
+  - ChatMemory 多窗口（ChatGPT 侧栏 UX）—— Vue 前端章节做
+  - ChatMemory 老消息 RAG 召回（滑动窗口 + 历史向量检索）
+  - 单机部署 → 集群（学习项目可不做）
 
 ---
 
@@ -352,6 +363,10 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **MBP 按 Spring Boot 版本分 starter**：`spring-boot3-starter` vs `spring-boot4-starter`，对 SB4 必须用后者
 - **Windows 保留端口段（动态分配）**：8080、3306 等常用端口可能落在 Hyper-V/WSL2 的保留段，netstat 查不到但 bind 失败。根治方案：`netsh int ipv4 set dynamic tcp start=49152 num=16384` 把动态保留段挪到 49152+
 - **MQ 字符串集中管理**：用 `MqConstants` 类把队列名 / 交换机 / routing key 都放一起，避免散落各处
+- **Spring AI 与 Spring Boot 4 的版本对应**：Spring AI 1.x ↔ Spring Boot 3.x（稳定 GA），Spring AI 2.x ↔ Spring Boot 4.x（截至 2026-05 仍在 milestone，本项目用 `2.0.0-M8`）。生态滞后是 Spring 大版本升级的常态，约需 6-12 个月稳定
+- **GlobalExceptionHandler 的反模式**：`@ExceptionHandler(Exception.class)` 兜底**必须** `log.error("...", e)` 打 stack trace。光返回 `Result.fail(500)` 而不 log，会导致"用户报 500、控制台没异常"的灾难——业界铁律：前端友好 ≠ 开发者也瞎
+- **Spring AI M7/M8 ChatMemory + Tool Calling 持久化 bug**：`JdbcChatMemoryRepository` 的表 schema 没有 `tool_call_id` 列，tool 消息持久化后丢字段，下一轮 rehydrate 时 OpenAI SDK 抛 `toolCallId is required`。解法：**装饰器模式** —— 写 `TextOnlyChatMemoryRepository implements ChatMemoryRepository` 包装原 Jdbc 仓库，`saveAll` 时过滤掉 `ToolResponseMessage` 与带 `toolCalls` 的 `AssistantMessage`。代价：跨轮引用 tool 原始结果失效，但 LLM 拿到 tool 后的文字总结仍保留，实用上几乎无影响
+- **Spring 全家桶 `initialize-schema` 三档值**：`never`（默认，生产）/ `embedded`（仅内嵌库）/ `always`（每次启动跑建表脚本）。默认保守，要框架代管 schema 必须显式 opt-in。同套路出现在 `spring.sql.init.mode` / `spring.session.jdbc.initialize-schema` 等多处
 
 ---
 

@@ -1,12 +1,14 @@
 package com.dy.mcrecorder.mc_recorder.exception;
 
 import com.dy.mcrecorder.mc_recorder.common.Result;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 // 全局异常"翻译官"：盯着所有 Controller，把抛出来的异常统一翻译成 Result 信封
 // @RestControllerAdvice = @ControllerAdvice + @ResponseBody（返回值自动转 JSON，和 @RestController 一样）
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -22,6 +24,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<Void> handleOther(Exception e) {
         // 真实项目这里要打日志（log.error），方便开发者排查；但响应只给一句人话
+        log.error("未捕获异常: ", e);// ← 第二个参数传 e,SLF4J 自动打全 stack trace
         return Result.fail(500, "服务器内部错误");
     }
 }

@@ -25,8 +25,12 @@ spring:
       api-key: 64b187a716844e8aaf9f2e0ed37db3ca.0g1e3yB4hs8kXNEd
       chat:
         completions-path: /chat/completions
-        options:
-          model: glm-4-flash
+        model: glm-4-flash
+    chat:
+      memory:
+        repository:
+          jdbc:
+            initialize-schema: always
 
 mybatis:
   configuration:
