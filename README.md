@@ -34,12 +34,12 @@
 ### 进行中
 
 - **AI 助手第一遍 - Spring AI**（main 分支）：
-  - ✅ 基础聊天（智谱 GLM-4-flash）
+  - ✅ 基础聊天（智谱 GLM-4.5-air）
   - ✅ Tool Calling（LLM 主动调 `getMyResonators` 看用户真实角色）
   - ✅ ChatMemory 多轮对话（MySQL 持久化 + 装饰器绕开 milestone bug）
   - ✅ RAG 手写版（智谱 embedding-3 + 内存向量库 + 手算余弦相似度 + augment prompt + system/user 分离抗 prompt injection）
-  - 🚧 下一步：Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor`，与 ChatMemory/Tool 一锅端）
-  - ⏳ 之后：pgvector / Redis Vector 持久化 / MCP 探索
+  - ✅ Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor` + 自定义 prompt 模板，统一 `/chat` 端点同时启用 RAG + Memory + Tool 三件套）
+  - 🚧 下一步：pgvector / Redis Vector 持久化向量库 / MCP 探索
 
 ### 计划
 
@@ -214,6 +214,7 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── MybatisPlusConfig            MyBatis-Plus 分页插件配置
 │   ├── OpenApiConfig                Swagger Bearer JWT 集成
 │   ├── RabbitMqConfig               RabbitMQ Queue / Exchange / Binding 声明 + JSON 消息转换器
+│   ├── AiConfig                     @Bean 暴露 `SimpleVectorStore`（注入 EmbeddingModel）
 │   └── TextOnlyChatMemoryRepository 装饰器：包装 JdbcChatMemoryRepository，过滤 tool 消息绕开 Spring AI M7/M8 bug
 ├── controller/
 │   ├── AuthController               注册 / 登录 / 当前用户
@@ -237,11 +238,9 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
     ├── ResonatorService             角色业务 + LambdaQueryWrapper
     ├── WelcomeEmailProducer         MQ 生产者
     ├── WelcomeEmailConsumer         MQ 消费者（@RabbitListener）
-    ├── AiService                    ChatClient + ChatMemory + Advisor + Tool Calling
+    ├── AiService                    ChatClient + 三 advisor 链（Memory + RAG + Tool）+ 自定义抗注入 prompt 模板
     ├── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
-    ├── InMemoryVectorStore          手写内存向量库 + 手算余弦相似度（@Component 单例）
-    ├── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → embed → 灌库
-    └── RagService                   RAG 完整流程：query→embed→search→augment→LLM（用 system/user 分离抗注入）
+    └── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → 包成 Document → vectorStore.add()（框架自动 embed）
 
 src/main/resources/
 └── knowledge/
@@ -274,7 +273,8 @@ docker-compose.yml                   多容器编排
 | 12 | AI - Spring AI 基础（聊天 + Tool Calling）| ✅ 完成 |
 | 13 | AI - Spring AI 多轮对话（ChatMemory）| ✅ 完成 |
 | 14 | AI - Spring AI 知识库（RAG 手写版：embedding + 余弦 + augment）| ✅ 完成 |
-| 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 重写）| 🚧 下一站 |
+| 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 三件套合一）| ✅ 完成 |
+| 14c | AI - 持久化向量库（pgvector / Redis Vector）| 🚧 下一站（可选）|
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
 | 17 | Elasticsearch 搜索 | ⏳ 计划中 |
@@ -381,6 +381,12 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **Windows CRLF 换行符坑 RAG 切块**：`wuwa.md` 在 Windows 下默认 CRLF（`\r\n`），用正则 `\n---\n` 切块永远匹配不上 → 整个文件被当成 1 块。解法：用 Java regex 的 `\\R`（匹配任意换行）—— `content.split("\\R---\\R")`。同套路适用所有跨平台文本处理
 - **Prompt Injection 多层防御**：RAG 把检索资料 + 用户问题塞同一个 user message 时，用户可以"忽略上面所有指令"覆盖。解法：把任务规则塞 `.system(...)`，动态内容塞 `.user(...)`，OpenAI 协议下 system 权重 > user。但 100% 防御是开放问题，业界做法是"defense in depth"：① provider 内置 moderation（智谱已内置） + ② 你的 system prompt 显式禁止泄露 + ③ 输出后处理。商用 LLM 上想测自己的 prompt 抗性，要小心 provider moderation 抢先拦截（这本身也是好事，多一层防御）
 - **YAGNI（"你不需要它"）原则**：开发时不要为"可能将来用"的参数预留。如 `ragChat(query, topK, userId)` 里 `userId` 用不上就别留——参数列表是 API 契约的一部分，今天的多余明天就是包袱
+- **Spring AI 2.0 模块拆分**：1.x 时代 VectorStore + advisors 都打在一个大 starter 里；2.0 拆成 `spring-ai-vector-store`（接口 + `SimpleVectorStore`）和 `spring-ai-advisors-vector-store`（`QuestionAnswerAdvisor`）等独立模块。用啥加啥，干净但要记得显式声明
+- **Spring AI 2.0 配置结构变化**：`spring.ai.openai.chat.options.model` 是 1.x 路径，2.0-M8 直接 inline 成 `spring.ai.openai.chat.model`，IDE 会标 `options.*` 已过时——按 IDE 提示走，老经验失效
+- **Field-only-in-constructor 反模式**：构造器参数用一次就用不到时（如 `VectorStore` 只在构造器里给 advisor，`chat()` 方法不再用），**不要建字段**，直接用构造器参数。规则：**字段是给跨方法共享状态用的**，一次性连线不算
+- **弱模型遇上复杂 prompt 的退化**：GLM-4-flash（免费 tier）遇到"三件套 + 长 system prompt"会**自己幻觉"我没权限"拒绝调 tool**，不是 prompt 写错，是模型能力上限。业界经验：**80% 的"AI 应用不好用"问题升一档模型就解决**，prompt 优化的边际收益远不如换模型。学习项目里 `glm-4.5-air`（¥0.5/M tokens）足够
+- **三类问题分流模板（RAG / Tool / Memory）**：默认 `QuestionAnswerAdvisor` 模板"必须依据上下文回答"太霸道，会让 LLM 把所有问题（包括"我叫什么"这种 Memory 问题）都答"不知道"。解法：自定义 `PromptTemplate`，显式三段引导——百科问题走 RAG、个人数据问题用 Tool、对话信息走 Memory。**通用引导胜过逐工具枚举**（一句"用户数据用工具"比列举每个 @Tool 强）
+- **Provider SDK vs 框架抽象**：智谱有自家 `ai.z.openapi:zai-sdk`，但用了就锁死智谱、失去 Spring AI 的 VectorStore/ChatMemory/Advisor 抽象；用 Spring AI + OpenAI 兼容协议 → 换 DeepSeek/Claude/Ollama 改 yaml 即可。学习/生产几乎都该选框架抽象一边
 
 ---
 

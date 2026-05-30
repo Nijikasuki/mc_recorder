@@ -18,7 +18,9 @@
       "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/spring-web/7.0.7/spring-web-7.0.7.jar org.springframework.http.HttpHeaders)",
       "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/ai/spring-ai-model/2.0.0-M7/spring-ai-model-2.0.0-M7.jar -constants 'org.springframework.ai.chat.memory.ChatMemory')",
       "Bash(gh --version)",
-      "Bash(./mvnw.cmd dependency:tree)"
+      "Bash(./mvnw.cmd dependency:tree)",
+      "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"VectorStore.class\" >/dev/null && echo \"{}\"')",
+      "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep \"vectorstore/VectorStore.class\" > /dev/null && echo \"{}\"')"
     ]
   }
 }
