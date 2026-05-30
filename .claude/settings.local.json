@@ -16,7 +16,9 @@
       "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/amqp/spring-amqp/4.0.3/spring-amqp-4.0.3.jar org.springframework.amqp.support.converter.JacksonJsonMessageConverter)",
       "Bash(findstr rabbit *)",
       "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/spring-web/7.0.7/spring-web-7.0.7.jar org.springframework.http.HttpHeaders)",
-      "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/ai/spring-ai-model/2.0.0-M7/spring-ai-model-2.0.0-M7.jar -constants 'org.springframework.ai.chat.memory.ChatMemory')"
+      "Bash(javap -classpath /c/Users/Administrator/.m2/repository/org/springframework/ai/spring-ai-model/2.0.0-M7/spring-ai-model-2.0.0-M7.jar -constants 'org.springframework.ai.chat.memory.ChatMemory')",
+      "Bash(gh --version)",
+      "Bash(./mvnw.cmd dependency:tree)"
     ]
   }
 }

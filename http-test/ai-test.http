@@ -11,6 +11,14 @@ Content-Type: application/json
     client.global.set("token", response.body.data);
 %}
 
+### Embedding 冒烟测试
+GET http://localhost:8000/api/ai/embed-test?text=琳奈是衍射属性的共鸣者
+Authorization: Bearer {{token}}
+
+### Embedding知识库 冒烟测试
+GET http://localhost:8000/api/ai/store-size
+Authorization: Bearer {{token}}
+
 ### 1. 第一次和 AI 对话
 POST http://localhost:8000/api/ai/chat?message=你好,介绍一下你自己
 Authorization: Bearer {{token}}

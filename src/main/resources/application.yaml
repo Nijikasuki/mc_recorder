@@ -26,6 +26,9 @@ spring:
       chat:
         completions-path: /chat/completions
         model: glm-4-flash
+      embedding:
+        embeddings-path: /embeddings
+        model: embedding-3
     chat:
       memory:
         repository:

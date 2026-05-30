@@ -37,8 +37,9 @@
   - ✅ 基础聊天（智谱 GLM-4-flash）
   - ✅ Tool Calling（LLM 主动调 `getMyResonators` 看用户真实角色）
   - ✅ ChatMemory 多轮对话（MySQL 持久化 + 装饰器绕开 milestone bug）
-  - 🚧 下一步：RAG 鸣潮百科
-  - ⏳ 之后：MCP 探索
+  - ✅ RAG 手写版（智谱 embedding-3 + 内存向量库 + 手算余弦相似度 + augment prompt + system/user 分离抗 prompt injection）
+  - 🚧 下一步：Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor`，与 ChatMemory/Tool 一锅端）
+  - ⏳ 之后：pgvector / Redis Vector 持久化 / MCP 探索
 
 ### 计划
 
@@ -237,7 +238,14 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
     ├── WelcomeEmailProducer         MQ 生产者
     ├── WelcomeEmailConsumer         MQ 消费者（@RabbitListener）
     ├── AiService                    ChatClient + ChatMemory + Advisor + Tool Calling
-    └── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
+    ├── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
+    ├── InMemoryVectorStore          手写内存向量库 + 手算余弦相似度（@Component 单例）
+    ├── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → embed → 灌库
+    └── RagService                   RAG 完整流程：query→embed→search→augment→LLM（用 system/user 分离抗注入）
+
+src/main/resources/
+└── knowledge/
+    └── wuwa.md                      鸣潮共鸣者百科（手写 5 个角色，按 --- 分隔块）
 
 http-test/                           各业务测试用例（IDEA HTTP Client）
 Dockerfile                           应用镜像构建
@@ -265,7 +273,8 @@ docker-compose.yml                   多容器编排
 | 11 | RabbitMQ：基础设施 + 注册异步发欢迎邮件 | ✅ 完成 |
 | 12 | AI - Spring AI 基础（聊天 + Tool Calling）| ✅ 完成 |
 | 13 | AI - Spring AI 多轮对话（ChatMemory）| ✅ 完成 |
-| 14 | AI - Spring AI 知识库（RAG）| 🚧 下一站 |
+| 14 | AI - Spring AI 知识库（RAG 手写版：embedding + 余弦 + augment）| ✅ 完成 |
+| 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 重写）| 🚧 下一站 |
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
 | 17 | Elasticsearch 搜索 | ⏳ 计划中 |
@@ -336,6 +345,7 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 
 > 这里可以随时加新想法，实现后挪到上面的「已完成」。
 
+- **第三方 API 集成练习**（独立 mini-章节，等 RAG 后插入）：在项目里找一个需求，对接一个外部公开 API（如天气、汇率、热点新闻），完整走"读 API docs → 看认证方式 → 用 Spring `RestClient` 或 `WebClient` 调用 → 处理错误码与限流 → 包成自己的 Service"。目的：练"对接别人服务"这一工业刚需技能，而不是一直当服务方
 - **业界硬化项（路上择机加，别一次做完）**：
   - API key 走环境变量 / `.env` 文件（当前 `application.yaml` 里硬编码）
   - AI 调用流式输出（SSE / EventSource）——配合 Vue 前端一起做
@@ -367,6 +377,10 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **GlobalExceptionHandler 的反模式**：`@ExceptionHandler(Exception.class)` 兜底**必须** `log.error("...", e)` 打 stack trace。光返回 `Result.fail(500)` 而不 log，会导致"用户报 500、控制台没异常"的灾难——业界铁律：前端友好 ≠ 开发者也瞎
 - **Spring AI M7/M8 ChatMemory + Tool Calling 持久化 bug**：`JdbcChatMemoryRepository` 的表 schema 没有 `tool_call_id` 列，tool 消息持久化后丢字段，下一轮 rehydrate 时 OpenAI SDK 抛 `toolCallId is required`。解法：**装饰器模式** —— 写 `TextOnlyChatMemoryRepository implements ChatMemoryRepository` 包装原 Jdbc 仓库，`saveAll` 时过滤掉 `ToolResponseMessage` 与带 `toolCalls` 的 `AssistantMessage`。代价：跨轮引用 tool 原始结果失效，但 LLM 拿到 tool 后的文字总结仍保留，实用上几乎无影响
 - **Spring 全家桶 `initialize-schema` 三档值**：`never`（默认，生产）/ `embedded`（仅内嵌库）/ `always`（每次启动跑建表脚本）。默认保守，要框架代管 schema 必须显式 opt-in。同套路出现在 `spring.sql.init.mode` / `spring.session.jdbc.initialize-schema` 等多处
+- **Maven 传递依赖版本冲突**：Spring AI M8 拖的 `openai-java-core` 依赖 `swagger-annotations:2.2.31`（旧版无 `$dynamicRef`），与 SpringDoc 想要的新版冲突，导致 Swagger 启动后调 API 时 `NoSuchMethodError`。解法：pom 直接声明 `swagger-annotations:2.2.38`（直接依赖优先于传递依赖）。Maven 仲裁规则：直接 > 传递，传递里"距离近"的赢，所以打架时优先在 pom 里显式声明权威版本
+- **Windows CRLF 换行符坑 RAG 切块**：`wuwa.md` 在 Windows 下默认 CRLF（`\r\n`），用正则 `\n---\n` 切块永远匹配不上 → 整个文件被当成 1 块。解法：用 Java regex 的 `\\R`（匹配任意换行）—— `content.split("\\R---\\R")`。同套路适用所有跨平台文本处理
+- **Prompt Injection 多层防御**：RAG 把检索资料 + 用户问题塞同一个 user message 时，用户可以"忽略上面所有指令"覆盖。解法：把任务规则塞 `.system(...)`，动态内容塞 `.user(...)`，OpenAI 协议下 system 权重 > user。但 100% 防御是开放问题，业界做法是"defense in depth"：① provider 内置 moderation（智谱已内置） + ② 你的 system prompt 显式禁止泄露 + ③ 输出后处理。商用 LLM 上想测自己的 prompt 抗性，要小心 provider moderation 抢先拦截（这本身也是好事，多一层防御）
+- **YAGNI（"你不需要它"）原则**：开发时不要为"可能将来用"的参数预留。如 `ragChat(query, topK, userId)` 里 `userId` 用不上就别留——参数列表是 API 契约的一部分，今天的多余明天就是包袱
 
 ---
 
