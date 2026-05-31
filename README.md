@@ -39,7 +39,8 @@
   - ✅ ChatMemory 多轮对话（MySQL 持久化 + 装饰器绕开 milestone bug）
   - ✅ RAG 手写版（智谱 embedding-3 + 内存向量库 + 手算余弦相似度 + augment prompt + system/user 分离抗 prompt injection）
   - ✅ Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor` + 自定义 prompt 模板，统一 `/chat` 端点同时启用 RAG + Memory + Tool 三件套）
-  - 🚧 下一步：pgvector / Redis Vector 持久化向量库 / MCP 探索
+  - ✅ pgvector 持久化向量库（Polyglot Persistence：MySQL 主 + Postgres 副 双 DataSource，PgVectorStore 替代 SimpleVectorStore，启动幂等检查）
+  - 🚧 下一步：第三方 API 集成练习 / 部署上线 / Vue3 前端
 
 ### 计划
 
@@ -58,7 +59,7 @@
 | 语言 / 框架 | Java 25 / Spring Boot 4.0.6 |
 | 安全 | Spring Security + JWT (jjwt 0.12.6) |
 | 数据访问 | MyBatis-Plus 3.5.14（含分页插件 jsqlparser）|
-| 数据库 | MySQL 8.0（Docker） |
+| 数据库 | MySQL 8.0（业务数据） + PostgreSQL 16 + pgvector（向量库），均 Docker |
 | 缓存 | Redis 7（Docker） + Spring Cache 抽象 |
 | 消息队列 | RabbitMQ 3-management（Docker） |
 | API 文档 | SpringDoc OpenAPI 2.8.13 |
@@ -214,7 +215,8 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── MybatisPlusConfig            MyBatis-Plus 分页插件配置
 │   ├── OpenApiConfig                Swagger Bearer JWT 集成
 │   ├── RabbitMqConfig               RabbitMQ Queue / Exchange / Binding 声明 + JSON 消息转换器
-│   ├── AiConfig                     @Bean 暴露 `SimpleVectorStore`（注入 EmbeddingModel）
+│   ├── AiConfig                     @Bean 暴露 `PgVectorStore`（注入 pgvectorJdbcTemplate + EmbeddingModel）
+│   ├── DatabaseConfig               双 DataSource 配置：MySQL @Primary（业务数据/ChatMemory）+ pgvector（向量库）
 │   └── TextOnlyChatMemoryRepository 装饰器：包装 JdbcChatMemoryRepository，过滤 tool 消息绕开 Spring AI M7/M8 bug
 ├── controller/
 │   ├── AuthController               注册 / 登录 / 当前用户
@@ -274,7 +276,8 @@ docker-compose.yml                   多容器编排
 | 13 | AI - Spring AI 多轮对话（ChatMemory）| ✅ 完成 |
 | 14 | AI - Spring AI 知识库（RAG 手写版：embedding + 余弦 + augment）| ✅ 完成 |
 | 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 三件套合一）| ✅ 完成 |
-| 14c | AI - 持久化向量库（pgvector / Redis Vector）| 🚧 下一站（可选）|
+| 14c | AI - 持久化向量库（pgvector + 双 DataSource）| ✅ 完成 |
+| 14d | 第三方 API 集成练习（练读 docs + 鉴权 + 限流）| 🚧 下一站 |
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
 | 17 | Elasticsearch 搜索 | ⏳ 计划中 |
@@ -387,6 +390,14 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **弱模型遇上复杂 prompt 的退化**：GLM-4-flash（免费 tier）遇到"三件套 + 长 system prompt"会**自己幻觉"我没权限"拒绝调 tool**，不是 prompt 写错，是模型能力上限。业界经验：**80% 的"AI 应用不好用"问题升一档模型就解决**，prompt 优化的边际收益远不如换模型。学习项目里 `glm-4.5-air`（¥0.5/M tokens）足够
 - **三类问题分流模板（RAG / Tool / Memory）**：默认 `QuestionAnswerAdvisor` 模板"必须依据上下文回答"太霸道，会让 LLM 把所有问题（包括"我叫什么"这种 Memory 问题）都答"不知道"。解法：自定义 `PromptTemplate`，显式三段引导——百科问题走 RAG、个人数据问题用 Tool、对话信息走 Memory。**通用引导胜过逐工具枚举**（一句"用户数据用工具"比列举每个 @Tool 强）
 - **Provider SDK vs 框架抽象**：智谱有自家 `ai.z.openapi:zai-sdk`，但用了就锁死智谱、失去 Spring AI 的 VectorStore/ChatMemory/Advisor 抽象；用 Spring AI + OpenAI 兼容协议 → 换 DeepSeek/Claude/Ollama 改 yaml 即可。学习/生产几乎都该选框架抽象一边
+- **Polyglot Persistence（多语言持久化）**：业界做法把不同数据放最合适的存储——MySQL 业务数据（强事务）+ Redis 缓存（速度）+ Postgres+pgvector 向量（相似度搜索）。学习项目 docker 各起一个容器即可，部署阶段 docker-compose 统一编排
+- **Spring Boot 多 DataSource 配置三板斧**：① 显式声明每个 `DataSourceProperties` + `DataSource` Bean（手写覆盖 auto-config）；② 主 DataSource 加 `@Primary`，副的不加；③ **每个注入处用 `@Qualifier("xxx")` 显式指定**——不依赖参数名匹配（字节码默认不保留参数名，靠不住）。**学习项目最易踩的坑：依赖 @Primary 自动选 JdbcTemplate**——多源场景下不可靠，应显式声明 `@Primary JdbcTemplate` Bean 给 MySQL 用
+- **`@ConditionalOnMissingBean` 的连锁效应**：Spring Boot 自动配的 DataSource 有 `@ConditionalOnMissingBean(DataSource.class)`——只要你定义任何 DataSource Bean（哪怕是副的），主 DataSource auto-config 就被跳过。后果：MyBatis/ChatMemory 注入 DataSource 时拿到副库（pgvector），SQL 跑 MySQL 语法报错。修法：显式声明主 DataSource + 标 @Primary
+- **starter vs 非 starter 依赖选择**：starter 含 auto-config，99% 场景省事；但**手动控制 Bean 创建**（如多 DataSource、自定义索引参数）时 auto-config 会**抢着创建 Bean 名冲突**。两条出路——① `spring.autoconfigure.exclude` 排除 auto-config；② 改用非 starter 依赖（如 `spring-ai-pgvector-store` 替代 `spring-ai-starter-vector-store-pgvector`）。后者更干净
+- **pgvector HNSW 索引 2000 维上限**：智谱 embedding-3 输出 2048 维，超过 pgvector HNSW 索引硬限（2000）→ `CREATE INDEX` 报错。解法：① 用 IVFFLAT 索引（上限 ~16000 维，速度略慢）；② 用 `PgVectorStore.PgIndexType.NONE` 不建索引（小数据集足够）；③ 改用 embedding-2（1024 维）。学习项目 5 个文档选 NONE 最省事
+- **PG schema 层在 IDEA 默认不展示**：PG 结构是 server → database → schema → table，比 MySQL 多一层。IDEA 连接 PG 后默认只显示连接 URL 里指定的那个数据库，且 schema 也要在 Properties → Schemas 勾选 `public`。命令行 `\dt` 能看到的表，IDEA 里要展开 `database → schemas → public → tables` 才看得到
+- **VectorStore 接口的接口隔离原则（ISP）**：Spring AI 的 `VectorStore extends DocumentWriter, VectorStoreRetriever`——把"写入"和"检索"拆成独立小接口组合而成。好处：只读服务依赖 `VectorStoreRetriever`，只写索引 batch 依赖 `DocumentWriter`，编译期就能限制权限。SOLID 五原则中 "I" 的实例
+- **Maven artifact 命名不规律**：Spring AI 2.0 系列里，pgvector 的 starter 叫 `spring-ai-starter-vector-store-pgvector`（多层分类式），非 starter 叫 `spring-ai-pgvector-store`（平铺式）。**命名规律不可猜**，拿不准就上 Maven Central 搜确认
 
 ---
 

@@ -117,6 +117,18 @@
             <artifactId>spring-ai-advisors-vector-store</artifactId>
             <version>2.0.0-M8</version>
         </dependency>
+        <!-- pgvector starter -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-pgvector-store</artifactId>
+            <version>2.0.0-M8</version>
+        </dependency>
+        <!-- Postgres JDBC 驱动 -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <!-- 强制升级,解决 spring-ai M8 拖的 openai-java-core 拖的 swagger-annotations:2.2.31 与 springdoc 想要的 2.2.38 冲突 -->
         <dependency>
             <groupId>io.swagger.core.v3</groupId>

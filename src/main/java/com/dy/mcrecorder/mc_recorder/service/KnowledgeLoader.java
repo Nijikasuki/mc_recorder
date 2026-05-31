@@ -2,6 +2,7 @@ package com.dy.mcrecorder.mc_recorder.service;
 
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.document.Document;
 import org.springframework.core.io.ClassPathResource;
@@ -22,6 +23,14 @@ public class KnowledgeLoader {
 
     @PostConstruct
     public void loadKnowledge() throws IOException {
+        var existing = vectorStore.similaritySearch(
+                SearchRequest.builder().query("琳奈").topK(1).build()
+        );
+        if (!existing.isEmpty()) {
+            log.info("知识库已有数据, 跳过加载");
+            return;
+        }
+
         ClassPathResource resource = new ClassPathResource("knowledge/wuwa.md");
         String content = resource.getContentAsString(StandardCharsets.UTF_8);
 
