@@ -22,7 +22,8 @@
       "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep -l \"VectorStore.class\" >/dev/null && echo \"{}\"')",
       "Bash(xargs -I {} sh -c 'unzip -l \"{}\" 2>/dev/null | grep \"vectorstore/VectorStore.class\" > /dev/null && echo \"{}\"')",
       "WebFetch(domain:central.sonatype.com)",
-      "WebFetch(domain:repo1.maven.org)"
+      "WebFetch(domain:repo1.maven.org)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }

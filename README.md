@@ -40,7 +40,8 @@
   - ✅ RAG 手写版（智谱 embedding-3 + 内存向量库 + 手算余弦相似度 + augment prompt + system/user 分离抗 prompt injection）
   - ✅ Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor` + 自定义 prompt 模板，统一 `/chat` 端点同时启用 RAG + Memory + Tool 三件套）
   - ✅ pgvector 持久化向量库（Polyglot Persistence：MySQL 主 + Postgres 副 双 DataSource，PgVectorStore 替代 SimpleVectorStore，启动幂等检查）
-  - 🚧 下一步：第三方 API 集成练习 / 部署上线 / Vue3 前端
+  - ✅ 第三方 API 集成（GitHub API 完整对接：RestClient + Properties + DTO + Service + @Tool 暴露给 AI；模型升级到 GLM-4-plus 解决 Tool Calling 循环）
+  - 🚧 下一步：Vue3 前端整合（终篇）
 
 ### 计划
 
@@ -217,16 +218,20 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── RabbitMqConfig               RabbitMQ Queue / Exchange / Binding 声明 + JSON 消息转换器
 │   ├── AiConfig                     @Bean 暴露 `PgVectorStore`（注入 pgvectorJdbcTemplate + EmbeddingModel）
 │   ├── DatabaseConfig               双 DataSource 配置：MySQL @Primary（业务数据/ChatMemory）+ pgvector（向量库）
+│   ├── GitHubProperties             @ConfigurationProperties 装 GitHub base-url + token
 │   └── TextOnlyChatMemoryRepository 装饰器：包装 JdbcChatMemoryRepository，过滤 tool 消息绕开 Spring AI M7/M8 bug
 ├── controller/
 │   ├── AuthController               注册 / 登录 / 当前用户
 │   ├── ResonatorController          角色 CRUD + 分页
-│   └── AiController                 AI 聊天入口（含多轮对话 + Tool Calling）
+│   ├── AiController                 AI 聊天入口（含多轮对话 + Tool Calling + RAG）
+│   └── GitHubController             GitHub 代理端点（HTTP 直接调，便于测试和前端复用）
 ├── dto/
 │   ├── RegisterRequest              注册请求（含 @Email 邮箱字段）
 │   ├── LoginRequest                 登录请求
 │   ├── UserResponse                 用户信息响应（隐藏 password）
-│   └── UserRegisteredEvent          MQ 事件 DTO（用户注册）
+│   ├── UserRegisteredEvent          MQ 事件 DTO（用户注册）
+│   ├── GitHubRepo                   GitHub 仓库信息 record（@JsonNaming(SnakeCaseStrategy)）
+│   └── GitHubRepoActivity           GitHub 仓库活动 record（含嵌套 Actor）
 ├── entity/
 │   ├── User                         含 @TableName / @TableId（MBP）+ email 字段
 │   └── Resonator                    含 @TableName / @TableId（MBP）
@@ -240,9 +245,11 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
     ├── ResonatorService             角色业务 + LambdaQueryWrapper
     ├── WelcomeEmailProducer         MQ 生产者
     ├── WelcomeEmailConsumer         MQ 消费者（@RabbitListener）
-    ├── AiService                    ChatClient + 三 advisor 链（Memory + RAG + Tool）+ 自定义抗注入 prompt 模板
+    ├── AiService                    ChatClient + 三 advisor 链（Memory + RAG + Tool）+ system prompt 分离架构
     ├── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
-    └── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → 包成 Document → vectorStore.add()（框架自动 embed）
+    ├── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → 包成 Document → vectorStore.add()（框架自动 embed）
+    ├── GitHubService                调 GitHub REST API 的核心 Service（RestClient + Bearer Token）
+    └── GitHubTools                  @Tool 类，包装 GitHubService 暴露给 LLM 调用
 
 src/main/resources/
 └── knowledge/
@@ -277,7 +284,8 @@ docker-compose.yml                   多容器编排
 | 14 | AI - Spring AI 知识库（RAG 手写版：embedding + 余弦 + augment）| ✅ 完成 |
 | 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 三件套合一）| ✅ 完成 |
 | 14c | AI - 持久化向量库（pgvector + 双 DataSource）| ✅ 完成 |
-| 14d | 第三方 API 集成练习（练读 docs + 鉴权 + 限流）| 🚧 下一站 |
+| 14d | 第三方 API 集成（GitHub: RestClient + DTO + @Tool）| ✅ 完成 |
+| 18 | **Vue3 前端整合（终篇）**| 🚧 下一站 |
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
 | 17 | Elasticsearch 搜索 | ⏳ 计划中 |
@@ -398,6 +406,12 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **PG schema 层在 IDEA 默认不展示**：PG 结构是 server → database → schema → table，比 MySQL 多一层。IDEA 连接 PG 后默认只显示连接 URL 里指定的那个数据库，且 schema 也要在 Properties → Schemas 勾选 `public`。命令行 `\dt` 能看到的表，IDEA 里要展开 `database → schemas → public → tables` 才看得到
 - **VectorStore 接口的接口隔离原则（ISP）**：Spring AI 的 `VectorStore extends DocumentWriter, VectorStoreRetriever`——把"写入"和"检索"拆成独立小接口组合而成。好处：只读服务依赖 `VectorStoreRetriever`，只写索引 batch 依赖 `DocumentWriter`，编译期就能限制权限。SOLID 五原则中 "I" 的实例
 - **Maven artifact 命名不规律**：Spring AI 2.0 系列里，pgvector 的 starter 叫 `spring-ai-starter-vector-store-pgvector`（多层分类式），非 starter 叫 `spring-ai-pgvector-store`（平铺式）。**命名规律不可猜**，拿不准就上 Maven Central 搜确认
+- **第三方 REST API 集成的通用 6 步模板**：① 读 docs 找 base-url/认证/endpoint/响应 → ② 写 `Properties` 类装配置 → ③ 写 `DTO record` 匹配响应 → ④ 写 `Service` 用 `RestClient` 调 → ⑤ 写 `Controller` 暴露 HTTP（可选）+ 写 `@Tool` 暴露给 AI（可选）→ ⑥ 测试。这套模板对任何 RESTful API 通用（GitHub / 和风天气 / Tavily / Stripe / 智谱 都套这个）
+- **API docs 滞后于实际 API**：GitHub `/repos/{owner}/{repo}/activity` 文档示例的 `pushed_at`/`push_type`/`pusher`，实际响应是 `timestamp`/`activity_type`/`actor`。业界铁律：**写 DTO 前先 curl 抓真实响应**，不要 100% 信文档。curl 在 PowerShell 报 SSL 错时换 `Invoke-RestMethod` 原生命令
+- **Jackson 2 vs Jackson 3 双版本陷阱**：Spring AI 2.0.0-M8 + Jackson 3 时代，annotations 包 (`@JsonProperty`) 仍在 Jackson 2 的 `com.fasterxml.jackson.annotation.*`（向后兼容），databind 已在 `tools.jackson.*`。IDE auto-import 时候要识别这种"半 Jackson 3" 情况。`@JsonNaming` 在 `tools.jackson.databind.annotation`
+- **LLM Tool Calling 死循环的真凶层级**：模型能力 > 框架 > prompt。① 弱模型 (glm-4.5-air) 遇到复合跨源问题反复调同工具直到超时；② 升级到 glm-4-plus 一次调用就停，**1 元/M tokens 性价比极高**；③ 业界铁律："**80% 的 AI 应用问题用升级模型一招解决**"，prompt 工程是在选定模型上榨能力，模型选型才是核心杠杆
+- **架构干净 vs 跑得稳的取舍**：理论上 system prompt 应独立 (`.defaultSystem()`) 跟 RAG (用 QA advisor `.promptTemplate()`) 解耦，是 OpenAI 协议设计意图。但 Spring AI 2.0.0-M8 milestone 上，弱模型 + 干净架构容易死循环，强模型 + 干净架构则完美。结论：**架构选择跟模型能力联动**——强模型 → 协议级干净分离；弱模型 → 全塞 QA template 保险（设计妥协换功能）
+- **GitHub PAT 最小权限原则**：学习项目 PAT 选 "**no scope**"（不勾任何权限），享受认证后的 5000 次/小时限流提升，但即便 token 泄露**啥都干不了**（只能读公开数据，网上谁都能读）。比勾 `public_repo` 多余权限的 5 倍安全
 
 ---
 

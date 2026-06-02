@@ -115,3 +115,25 @@ Authorization: Bearer {{token}}
 ###   WHERE conversation_id = 'user-1'
 ###   ORDER BY `timestamp` DESC LIMIT 20;
 ### ====================================================================
+
+加在文件末尾:
+
+############################################################
+### Section 7: GitHub Tool 集成测试
+############################################################
+
+### 7.1 让 AI 查 spring-ai 仓库信息
+POST http://localhost:8000/api/ai/chat?message=帮我查一下 spring-projects/spring-ai 这个仓库有多少 star, 主要语言是啥
+Authorization: Bearer {{token}}
+
+### 7.2 让 AI 查仓库活动
+POST http://localhost:8000/api/ai/chat?message=spring-ai 最近在更新些什么? 谁在干活?
+Authorization: Bearer {{token}}
+
+### 7.3 跨工具综合: GitHub + 鸣潮 RAG 三件套
+POST http://localhost:8000/api/ai/chat?message=用一句话总结 vuejs/core 现在啥情况, 然后告诉我琳奈是什么属性
+Authorization: Bearer {{token}}
+
+### 7.4 验证 LLM 不会误调 (用户问鸣潮的, 不该调 GitHub)
+POST http://localhost:8000/api/ai/chat?message=琳奈是什么属性的角色
+Authorization: Bearer {{token}}

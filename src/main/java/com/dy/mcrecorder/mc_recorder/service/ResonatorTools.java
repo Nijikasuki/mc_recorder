@@ -1,12 +1,14 @@
 package com.dy.mcrecorder.mc_recorder.service;
 
 import com.dy.mcrecorder.mc_recorder.entity.Resonator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+@Slf4j
 @Component
 public class ResonatorTools {
     private final ResonatorService resonatorService;
@@ -21,7 +23,7 @@ public class ResonatorTools {
         // ToolContext 是 Spring AI 提供的"隐藏参数"，LLM 看不到它
         // 我们从中取 Controller 传进来的 userId
         Long userId = (Long) toolContext.getContext().get("userId");
-        System.out.println("[Tool] getMyResonators 被 LLM 调用了, userId=" + userId);
+        log.info("[Tool] getMyResonators 被 LLM 调用了, userId={}" , userId);
         return resonatorService.findAll(userId);
     }
 }
