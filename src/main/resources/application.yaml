@@ -48,3 +48,7 @@ mybatis:
 github:
   base-url: https://api.github.com
   token: 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
+
+tavily:
+  base-url: https://api.tavily.com
+  api-key: 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

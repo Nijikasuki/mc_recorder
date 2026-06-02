@@ -137,3 +137,23 @@ Authorization: Bearer {{token}}
 ### 7.4 验证 LLM 不会误调 (用户问鸣潮的, 不该调 GitHub)
 POST http://localhost:8000/api/ai/chat?message=琳奈是什么属性的角色
 Authorization: Bearer {{token}}
+
+  ############################################################
+  ### Section 8: Web Search Tool (Tavily) 集成测试
+  ############################################################
+
+### 8.1 通用知识查询
+POST http://localhost:8000/api/ai/chat?message=2026 年最新的 LLM 模型有哪些, 简单介绍一下
+Authorization: Bearer {{token}}
+
+### 8.2 时事新闻
+POST http://localhost:8000/api/ai/chat?message=最近 Spring 团队发布了什么新东西
+Authorization: Bearer {{token}}
+
+### 8.3 验证不滥用 — 鸣潮百科该走 RAG, 不该调 webSearch
+POST http://localhost:8000/api/ai/chat?message=琳奈是什么属性
+Authorization: Bearer {{token}}
+
+跑完报关键结果:
+- 8.1 / 8.2 应该看到 [Tool] webSearch 被 LLM 调用 日志, 给出真实搜索结果
+- 8.3 应该不调 webSearch(走 RAG), 答出"衍射"

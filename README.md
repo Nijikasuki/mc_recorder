@@ -41,6 +41,7 @@
   - ✅ Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor` + 自定义 prompt 模板，统一 `/chat` 端点同时启用 RAG + Memory + Tool 三件套）
   - ✅ pgvector 持久化向量库（Polyglot Persistence：MySQL 主 + Postgres 副 双 DataSource，PgVectorStore 替代 SimpleVectorStore，启动幂等检查）
   - ✅ 第三方 API 集成（GitHub API 完整对接：RestClient + Properties + DTO + Service + @Tool 暴露给 AI；模型升级到 GLM-4-plus 解决 Tool Calling 循环）
+  - ✅ 互联网搜索工具（Tavily 集成：POST + Bearer Token + 多层嵌套 DTO + @Tool 暴露给 AI，扩展 AI 实时知识能力）
   - 🚧 下一步：Vue3 前端整合（终篇）
 
 ### 计划
@@ -219,6 +220,7 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── AiConfig                     @Bean 暴露 `PgVectorStore`（注入 pgvectorJdbcTemplate + EmbeddingModel）
 │   ├── DatabaseConfig               双 DataSource 配置：MySQL @Primary（业务数据/ChatMemory）+ pgvector（向量库）
 │   ├── GitHubProperties             @ConfigurationProperties 装 GitHub base-url + token
+│   ├── TavilyProperties             @ConfigurationProperties 装 Tavily base-url + api-key
 │   └── TextOnlyChatMemoryRepository 装饰器：包装 JdbcChatMemoryRepository，过滤 tool 消息绕开 Spring AI M7/M8 bug
 ├── controller/
 │   ├── AuthController               注册 / 登录 / 当前用户
@@ -231,7 +233,9 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
 │   ├── UserResponse                 用户信息响应（隐藏 password）
 │   ├── UserRegisteredEvent          MQ 事件 DTO（用户注册）
 │   ├── GitHubRepo                   GitHub 仓库信息 record（@JsonNaming(SnakeCaseStrategy)）
-│   └── GitHubRepoActivity           GitHub 仓库活动 record（含嵌套 Actor）
+│   ├── GitHubRepoActivity           GitHub 仓库活动 record（含嵌套 Actor）
+│   ├── TavilySearchRequest          Tavily 搜索请求 record（query / maxResults / includeAnswer）
+│   └── TavilySearchResponse         Tavily 搜索响应 record（含嵌套 Image / Result + Map 兜底字段）
 ├── entity/
 │   ├── User                         含 @TableName / @TableId（MBP）+ email 字段
 │   └── Resonator                    含 @TableName / @TableId（MBP）
@@ -249,7 +253,9 @@ src/main/java/com/dy/mcrecorder/mc_recorder/
     ├── ResonatorTools               @Tool 类，暴露给 LLM 调用（含 ToolContext 隐藏 userId）
     ├── KnowledgeLoader              @PostConstruct 启动加载 wuwa.md → 切块 → 包成 Document → vectorStore.add()（框架自动 embed）
     ├── GitHubService                调 GitHub REST API 的核心 Service（RestClient + Bearer Token）
-    └── GitHubTools                  @Tool 类，包装 GitHubService 暴露给 LLM 调用
+    ├── GitHubTools                  @Tool 类，包装 GitHubService 暴露给 LLM 调用
+    ├── TavilyService                调 Tavily 搜索 API 的核心 Service（POST + Bearer Token）
+    └── WebSearchTools               @Tool 类，包装 TavilyService 暴露给 LLM（互联网搜索能力）
 
 src/main/resources/
 └── knowledge/
@@ -285,6 +291,7 @@ docker-compose.yml                   多容器编排
 | 14b | AI - Spring AI 框架版 RAG（`QuestionAnswerAdvisor` 三件套合一）| ✅ 完成 |
 | 14c | AI - 持久化向量库（pgvector + 双 DataSource）| ✅ 完成 |
 | 14d | 第三方 API 集成（GitHub: RestClient + DTO + @Tool）| ✅ 完成 |
+| 14e | 互联网搜索工具（Tavily: POST + Bearer + 多层嵌套 DTO）| ✅ 完成 |
 | 18 | **Vue3 前端整合（终篇）**| 🚧 下一站 |
 | 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
 | 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
@@ -412,6 +419,9 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **LLM Tool Calling 死循环的真凶层级**：模型能力 > 框架 > prompt。① 弱模型 (glm-4.5-air) 遇到复合跨源问题反复调同工具直到超时；② 升级到 glm-4-plus 一次调用就停，**1 元/M tokens 性价比极高**；③ 业界铁律："**80% 的 AI 应用问题用升级模型一招解决**"，prompt 工程是在选定模型上榨能力，模型选型才是核心杠杆
 - **架构干净 vs 跑得稳的取舍**：理论上 system prompt 应独立 (`.defaultSystem()`) 跟 RAG (用 QA advisor `.promptTemplate()`) 解耦，是 OpenAI 协议设计意图。但 Spring AI 2.0.0-M8 milestone 上，弱模型 + 干净架构容易死循环，强模型 + 干净架构则完美。结论：**架构选择跟模型能力联动**——强模型 → 协议级干净分离；弱模型 → 全塞 QA template 保险（设计妥协换功能）
 - **GitHub PAT 最小权限原则**：学习项目 PAT 选 "**no scope**"（不勾任何权限），享受认证后的 5000 次/小时限流提升，但即便 token 泄露**啥都干不了**（只能读公开数据，网上谁都能读）。比勾 `public_repo` 多余权限的 5 倍安全
+- **DTO 类型分级取舍**：根据数据结构稳定性选类型——固定字段用 `record`（强类型，最严格）；字段动态/未知用 `Map<String, Object>`（半结构化，宽松）；万不得已用 `Object`（无类型，最松）。Tavily 的 `auto_parameters` / `usage` 等"自由结构"字段用 Map 兜底，主体字段用 record，这是业界标准做法
+- **何时用 `ParameterizedTypeReference`**：RestClient 返回类型是泛型容器（`List<T>` / `Map<K,V>`）时必用，防 Java 类型擦除丢 T。返回单一具体 class 时不用——Jackson 用反射读 record 字段定义就能穿透嵌套泛型。口诀："顶层有 `<>` 就用 PTR，顶层是普通 class 就直接 `.class`"
+- **GET vs POST 在 RestClient 里**：GET 走 `.get().uri(...)`，参数在 URL 占位符里；POST 走 `.post().uri(...).body(obj)`，参数在 JSON body 里。Spring AI 内部 Jackson 自动序列化 body 并设 Content-Type。Tavily 是 POST + Header Bearer 鉴权的组合，跟 GitHub GET 在请求形式上不同但都套同一份"集成 6 步法"模板
 
 ---
 
