@@ -12,6 +12,7 @@ import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
 
 @Service
 public class AiService {
@@ -109,4 +110,17 @@ public class AiService {
                 .call()
                 .content();
     }
+
+    public Flux<String> chatStream(String message, Long userId) {
+        return chatClient.prompt(message)
+                .tools(spec -> spec
+                        .instances(resonatorTools, gitHubTools, webSearchTools)
+                        .context("userId", userId))
+                .advisors(a -> a.param(
+                        ChatMemory.CONVERSATION_ID,
+                        "user-" + userId))
+                .stream()             // ⭐  跟 chat() 唯一区别: .call() → .stream()
+                .content();
+    }
+
 }
