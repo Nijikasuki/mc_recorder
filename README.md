@@ -31,26 +31,31 @@
 - **RabbitMQ 基础设施**：Exchange + Queue + Binding 声明 + JSON 消息转换器（业务场景见下方）
 - 接口测试用例（`http-test/*.http`）
 
-### 进行中
-
-- **AI 助手第一遍 - Spring AI**（main 分支）：
-  - ✅ 基础聊天（智谱 GLM-4.5-air）
-  - ✅ Tool Calling（LLM 主动调 `getMyResonators` 看用户真实角色）
+- **AI 助手 - Spring AI**（main 分支，✅ 完成）：
+  - ✅ 基础聊天（智谱 GLM-4-plus）
+  - ✅ Tool Calling（5 个 @Tool: getMyResonators / getRepoInfo / getRepoActivities / webSearch + ResonatorSummary 防 LLM 数数幻觉）
   - ✅ ChatMemory 多轮对话（MySQL 持久化 + 装饰器绕开 milestone bug）
-  - ✅ RAG 手写版（智谱 embedding-3 + 内存向量库 + 手算余弦相似度 + augment prompt + system/user 分离抗 prompt injection）
-  - ✅ Spring AI 框架版 RAG（`SimpleVectorStore` + `QuestionAnswerAdvisor` + 自定义 prompt 模板，统一 `/chat` 端点同时启用 RAG + Memory + Tool 三件套）
-  - ✅ pgvector 持久化向量库（Polyglot Persistence：MySQL 主 + Postgres 副 双 DataSource，PgVectorStore 替代 SimpleVectorStore，启动幂等检查）
-  - ✅ 第三方 API 集成（GitHub API 完整对接：RestClient + Properties + DTO + Service + @Tool 暴露给 AI；模型升级到 GLM-4-plus 解决 Tool Calling 循环）
-  - ✅ 互联网搜索工具（Tavily 集成：POST + Bearer Token + 多层嵌套 DTO + @Tool 暴露给 AI，扩展 AI 实时知识能力）
-  - 🚧 下一步：Vue3 前端整合（终篇）
+  - ✅ RAG 手写版 → 框架版（`QuestionAnswerAdvisor` 三件套合一）→ pgvector 持久化
+  - ✅ 第三方 API 集成（GitHub / Tavily 互联网搜索 / 库街区游戏数据）
+- **Vue3 前端**（✅ 完成）：
+  - ✅ 完整登录闭环（JWT + Pinia + axios 拦截器 + 路由守卫）
+  - ✅ 角色 CRUD UI（Element Plus 表格 + 弹窗 + 表单校验）
+  - ✅ AI 流式聊天（ChatGPT 风格 + fetch SSE + 假流式打字效果绕开 Spring AI M8 buffering）
+  - ✅ 视觉美化（紫渐变 / 头像 / 卡片 / 动效）
+  - ✅ 库街区集成弹窗（绑定 + 同步 + 统计卡片 + 头像/皮肤预览）
+- **库街区集成**（✅ 完成）—— 接入真实鸣潮游戏数据：
+  - HTTP Toolkit 抓 Android App API（`/aki/roleBox/akiBox/roleData`）→ form-urlencoded body + 嵌套 JSON 字符串解析
+  - 用户级 token 多租户存储（`game_token` 表 + UPSERT）+ BizException 业务异常体系
+  - `@CacheEvict` 跨服务清除 `resonators::userId` 缓存解决"同步后表格不刷新"bug
+  - 同步策略: `source='kurobbs'` 标记 + 全删全插, 不动 `source='manual'` 手填数据
 
 ### 计划
 
 - AI 第二遍：Python LangChain 微服务版（python-microservice 分支）
-- 抽卡记录管理（gacha 模块）
-- 个人统计可视化页面
+- 部署 + CI/CD（docker-compose 编排全套 + GitHub Actions 自动构建镜像）
+- 个人统计可视化页面（ECharts 角色属性分布 / 培养进度图）
 - 全文搜索（Elasticsearch：角色模糊搜 + 日志聚合）
-- **Vue3 前端**（终篇——所有功能整合到一个像样的 web UI）
+- (可选) MCP 探索 / 抽卡记录（需游戏内一次性 URL，非账号 API）
 
 ---
 
@@ -65,17 +70,19 @@
 | 缓存 | Redis 7（Docker） + Spring Cache 抽象 |
 | 消息队列 | RabbitMQ 3-management（Docker） |
 | API 文档 | SpringDoc OpenAPI 2.8.13 |
-| AI 集成 | Spring AI 2.0.0-M8（OpenAI 兼容协议 → 智谱 GLM-4-flash） |
+| AI 集成 | Spring AI 2.0.0-M8（OpenAI 兼容协议 → 智谱 GLM-4-plus + embedding-3） |
+| 前端 | Vue 3.5 + Vite 8 + vue-router + Pinia + axios + Element Plus + Tailwind 4 |
 | 部署 | Docker / Docker Compose |
-| 构建 | Maven Wrapper |
+| 构建 | Maven Wrapper / npm |
 | 工具 | Lombok / Jackson 3 |
 
 ### 计划引入
 
 | 阶段 | 技术 |
 |------|------|
+| CI/CD | GitHub Actions |
 | 搜索 | Elasticsearch |
-| 前端 | Vue3 + axios |
+| Python AI 版 | FastAPI + LangChain（python-microservice 分支）|
 
 ---
 
@@ -292,11 +299,12 @@ docker-compose.yml                   多容器编排
 | 14c | AI - 持久化向量库（pgvector + 双 DataSource）| ✅ 完成 |
 | 14d | 第三方 API 集成（GitHub: RestClient + DTO + @Tool）| ✅ 完成 |
 | 14e | 互联网搜索工具（Tavily: POST + Bearer + 多层嵌套 DTO）| ✅ 完成 |
-| 18 | **Vue3 前端整合（终篇）**| 🚧 下一站 |
-| 15 | AI -（可选）MCP 探索 | ⏳ 可选 |
-| 16 | AI - Python LangChain 微服务版（独立分支）| ⏳ 计划中 |
-| 17 | Elasticsearch 搜索 | ⏳ 计划中 |
-| 18 | **Vue3 前端（终篇）**| ⏳ 计划中 |
+| 15 | Vue3 前端：登录 + CRUD + AI 流式聊天 + 视觉美化 | ✅ 完成 |
+| 16 | 库街区集成：HTTP Toolkit 抓包 + form-urlencoded + 嵌套 JSON + UPSERT + @CacheEvict 跨服务失效 + BizException | ✅ 完成 |
+| 17 | **部署 + CI/CD**（docker-compose 全栈编排 + GitHub Actions）| 🚧 下一站 |
+| 18 | AI - Python LangChain 微服务版（python-microservice 分支）| ⏳ 计划中 |
+| 19 | Elasticsearch 搜索 | ⏳ 计划中 |
+| 20 | AI -（可选）MCP 探索 | ⏳ 可选 |
 
 每个阶段都以「先理解概念 → 在项目里实战 → 留下能 git 回看的实例」为标准。
 
@@ -422,6 +430,15 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **DTO 类型分级取舍**：根据数据结构稳定性选类型——固定字段用 `record`（强类型，最严格）；字段动态/未知用 `Map<String, Object>`（半结构化，宽松）；万不得已用 `Object`（无类型，最松）。Tavily 的 `auto_parameters` / `usage` 等"自由结构"字段用 Map 兜底，主体字段用 record，这是业界标准做法
 - **何时用 `ParameterizedTypeReference`**：RestClient 返回类型是泛型容器（`List<T>` / `Map<K,V>`）时必用，防 Java 类型擦除丢 T。返回单一具体 class 时不用——Jackson 用反射读 record 字段定义就能穿透嵌套泛型。口诀："顶层有 `<>` 就用 PTR，顶层是普通 class 就直接 `.class`"
 - **GET vs POST 在 RestClient 里**：GET 走 `.get().uri(...)`，参数在 URL 占位符里；POST 走 `.post().uri(...).body(obj)`，参数在 JSON body 里。Spring AI 内部 Jackson 自动序列化 body 并设 Content-Type。Tavily 是 POST + Header Bearer 鉴权的组合，跟 GitHub GET 在请求形式上不同但都套同一份"集成 6 步法"模板
+- **国内非标准 API 的 4 个坑（库街区）**：① 鉴权用自定义 Header（`b-at`），不走 OAuth/Bearer；② Body 是 `application/x-www-form-urlencoded`，不是 JSON；③ 响应 `data` 字段是**字符串再套 JSON**（双层 JSON），DTO 必须 `data: String` 再用 `objectMapper.readValue(resp.data(), RoleDataPayload.class)` 二次解析；④ 业务码 `code=10903` 表示 token 失效，非 HTTP 401。国内大厂自研 API 经常违反 REST 惯例，先 curl 抓真实响应再写代码
+- **BizException 模式（业务异常 vs 系统异常）**：`throw new RuntimeException("token 失效")` 会被 `GlobalExceptionHandler` 的 `@ExceptionHandler(Exception.class)` 兜底返 500 "服务器内部错误"——用户看不懂、日志却是 ERROR（其实是用户问题）。正解：自建 `BizException extends RuntimeException` + `int code`，加专属 handler 返 `Result.fail(code, message)` + WARN 日志。业界 Java 后端每个项目都有自己的 BizException 体系，对应 HTTP 状态码语义（400/401/403/404/500/502）
+- **跨服务 `@CacheEvict` 失效坑**：A Service 用 `@Cacheable` 缓存数据，B Service 直接调 Mapper 改 DB 时**绕开 A 的 @CacheEvict**，缓存永远过期。Symptom：库街区 sync 写入 38 条新数据，但 ResonatorService.findAll 仍返旧缓存空列表，"删一个角色才看见同步结果"（因为 delete 触发了 @CacheEvict）。解法：B Service 方法上**也加** `@CacheEvict(value="resonators", key="#userId")`。业界 Cache-Aside 模式下，凡是绕过原 Service 的写操作都要补缓存清除注解
+- **LLM 数数幻觉 + Tool 设计原则**：LLM 拿到 38 个角色的 JSON 数组，回答"你有几个"时可能说"39"——长列表 + 复杂对象会触发 "counting hallucination"，所有 LLM 通病。解法：Tool 返回结构里**物化关键事实**（`record ResonatorSummary(int total, List<Resonator> characters)`），并在 `@Tool(description=...)` 里明确"**直接用 total 字段, 不要自己数**"。设计原则：LLM 擅长理解/总结/推理，**不擅长精确事实**——把不擅长的算好给它
+- **Spring Security 7 + Flux 流式异步派发坑**：返回 `Flux<String>` 的 SSE 端点，初次 REQUEST 鉴权通过，但流式输出阶段 Spring 走 ASYNC dispatcher 重新过滤器链，SecurityContext 已经丢失 → `AuthorizationDeniedException: Access Denied`。Spring Security 6/7 默认对 ASYNC/ERROR dispatcher 也鉴权，5.x 不会。解法：`authorizeHttpRequests` 里加 `.dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()`——仅初次请求鉴权，重派发放行
+- **Vue3 ref + 普通对象 push 进数组的响应式陷阱**：`const obj = {...}; arr.value.push(obj); obj.x = 1` —— Vue 3 把数组元素包了 Proxy，但你的 `obj` 局部变量仍指向**原始对象**而非 Proxy，直接修改属性**不触发响应式**。AiChatView 流式打字一开始全部聚成一次刷新就是这个 bug。解法：`reactive({...})` 包裹后再 push，或 push 完用 `arr.value[arr.value.length-1]` 取出 Proxy 版本。Vue3 这是新手必踩的隐形坑
+- **空文件踩坑 + IDE 异步保存**：从子目录 `cd mc_recorder_web && git add .` 只 stage 该目录文件；同时 IDEA 还在后台自动保存 Java 代码（100ms-1s 延迟），紧接着 commit 出去的可能是"空骨架"（仅 `package + class {}` 4 行）。Symptom：git log 显示 file added 但只有 4 行。预防：① 在项目根目录跑 `git add .`；② commit 前 **`git diff --staged` 看一眼真实内容**；③ Ctrl+S 手动保存别赖自动；④ `git show HEAD` 验证 commit 完整
+- **HTTP/2 Stream Reset 是网络瞬时失败, 不是代码 bug**：`okhttp3.internal.http2.StreamResetException: stream was reset: CANCEL` 通常是上游 LLM 服务网关临时过载/抖动主动 cancel 连接。互联网服务 SLA 几乎不可能 100%，1-5‰ 概率的瞬时失败是分布式系统常态。Spring AI M8 milestone 没内置自动重试，需要时手动加 `@Retryable` 或 Resilience4j。学习项目阶段：**重问一次 90% 会好**，不必上重试机制
+- **Spring AI 流式 + Tool + Advisor 三件套的 buffering 现实**：理论上 `.stream()` 应该字符级流式，实际上 M8 milestone 在多 advisor 链 + tool calling 场景下**会先 buffer 完整响应再一起发**——浏览器收到的是一个大包（看 HTTP Toolkit 时间戳几乎相同）。解法：**前端假流式**（typewriter effect with `setTimeout` per char），UX 等同真流式。业界 ChatGPT 早期也用这套，体验为重
 
 ---
 
