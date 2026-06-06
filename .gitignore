@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### 含真实凭证的测试文件 (含库街区 b-at 等敏感信息) ###
+http-test/kurobbs.http
+http-test/kurobbs-bind.http

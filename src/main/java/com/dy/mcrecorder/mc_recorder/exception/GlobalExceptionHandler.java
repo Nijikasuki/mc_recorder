@@ -20,6 +20,13 @@ public class GlobalExceptionHandler {
         return Result.fail(400, message);
     }
 
+    @ExceptionHandler(BizException.class)
+    public Result<Void> handleBiz(BizException e) {
+        // 业务异常不打 ERROR 日志, 用 WARN 或 DEBUG 即可
+        log.warn("业务异常: {}", e.getMessage());
+        return Result.fail(e.getCode(), e.getMessage());
+    }
+
     // 兜底：其它没预料到的异常，统一返回 500，绝不把堆栈泄露给前端
     @ExceptionHandler(Exception.class)
     public Result<Void> handleOther(Exception e) {

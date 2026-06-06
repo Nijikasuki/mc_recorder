@@ -57,6 +57,21 @@ public class Resonator {
     @NotNull(message="共鸣链不能为空") @Min(0) @Max(6)
     private Integer resonanceChain;     // 对应列 resonance_chain（共鸣链 0-6）
 
+    @Schema(description = "库街区角色模板 ID", example = "1509")
+    private Integer kuroRoleId;
+
+    @Schema(description = "数据来源: manual 手动 / kurobbs 同步", example = "kurobbs")
+    private String source;
+
+    @Schema(description = "上次从库街区同步时间", accessMode = Schema.AccessMode.READ_ONLY)
+    private LocalDateTime syncedAt;
+
+    @Schema(description = "角色头像 URL", accessMode = Schema.AccessMode.READ_ONLY)
+    private String roleIconUrl;
+
+    @Schema(description = "角色立绘 URL", accessMode = Schema.AccessMode.READ_ONLY)
+    private String rolePicUrl;
+
     // 这两个时间字段：建表时配了 DEFAULT/ON UPDATE CURRENT_TIMESTAMP
     // 由数据库自动维护，INSERT/UPDATE 的 SQL 里都不写它们
     @Schema(description = "创建时间", accessMode = Schema.AccessMode.READ_ONLY)
@@ -64,4 +79,19 @@ public class Resonator {
 
     @Schema(description = "最后更新时间", accessMode = Schema.AccessMode.READ_ONLY)
     private LocalDateTime updatedAt;    // 对应列 updated_at
+
+    @Schema(description = "突破等级", example = "6")
+    private Integer breach;
+
+    @Schema(description = "是否主角(漂泊者)")
+    private Boolean isMainRole;
+
+    @Schema(description = "武器类型", example = "迅刀")
+    private String weaponTypeName;
+
+    @Schema(description = "当前皮肤名", example = "缤纷映色")
+    private String skinName;
+
+    @Schema(description = "皮肤立绘 URL", accessMode = Schema.AccessMode.READ_ONLY)
+    private String skinPicUrl;
 }
