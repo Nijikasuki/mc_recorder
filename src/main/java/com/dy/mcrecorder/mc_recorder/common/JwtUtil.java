@@ -3,6 +3,8 @@ package com.dy.mcrecorder.mc_recorder.common;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -13,13 +15,17 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // 服务器密钥：JWT 安全的命根子，只在服务器、绝不下发
-    // HS256 要求密钥至少 256 位（32 字节），所以这串故意写长
-    // ⚠️ 真实项目密钥要放配置/环境变量，不能硬编码进源码（和 DB 密码同理）
-    private static final String SECRET = "mc-recorder-super-secret-key-change-it-in-production-2026";
+    // ⭐ 从 application.yaml 的 jwt.secret 读, 外部化避免硬编码泄漏
+    @Value("${jwt.secret}")
+    private String secret;
 
-    // 把字符串密钥转成 jjwt 要的 SecretKey 对象
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private SecretKey key;
+
+    // 注入完成后初始化 key (因为 @Value 在构造后才生效)
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     // token 有效期：这里设 24 小时（学习方便；真实项目常更短 + 配刷新机制）
     private static final long EXPIRE_MS = 24 * 60 * 60 * 1000L;

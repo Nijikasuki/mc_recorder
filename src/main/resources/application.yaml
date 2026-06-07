@@ -7,14 +7,14 @@ spring:
     name: mc_recorder
   datasource:
     url: jdbc:mysql://localhost:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8
-    username: root
-    password: root123
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
     pgvector:
       url: jdbc:postgresql://localhost:5432/wuwa_vectors
-      username: postgres
-      password: postgres
+      username: ${POSTGRES_USERNAME:postgres}
+      password: ${POSTGRES_PASSWORD:postgres}
       driver-class-name: org.postgresql.Driver
   data:
     redis:
@@ -23,12 +23,13 @@ spring:
   rabbitmq:
     host: localhost
     port: 5672
-    username: guest
-    password: guest
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
   ai:
     openai:
       base-url: https://open.bigmodel.cn/api/paas/v4
-      api-key: 64b187a716844e8aaf9f2e0ed37db3ca.0g1e3yB4hs8kXNEd
+      # ⭐ 真实密钥从环境变量读, 不在源码里
+      api-key: ${ZHIPU_API_KEY:set-via-env}
       chat:
         completions-path: /chat/completions
         model: glm-4-plus
@@ -45,13 +46,17 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
+# ⭐ JWT 签名密钥 (HS256 要求 ≥32 字节)
+jwt:
+  secret: ${JWT_SECRET:mc-recorder-dev-secret-key-change-it-in-production-2026}
+
 github:
   base-url: https://api.github.com
-  token: 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
+  token: ${GITHUB_TOKEN:set-via-env}
 
 tavily:
   base-url: https://api.tavily.com
-  api-key: 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
+  api-key: ${TAVILY_API_KEY:set-via-env}
 
 kurobbs:
   base-url: https://api.kurobbs.com

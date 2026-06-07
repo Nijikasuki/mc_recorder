@@ -35,3 +35,7 @@ build/
 ### 含真实凭证的测试文件 (含库街区 b-at 等敏感信息) ###
 http-test/kurobbs.http
 http-test/kurobbs-bind.http
+
+### 环境变量 / 真实密钥 (永远不进 git) ###
+.env
+application-local.yaml
