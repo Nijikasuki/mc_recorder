@@ -48,11 +48,20 @@
   - 用户级 token 多租户存储（`game_token` 表 + UPSERT）+ BizException 业务异常体系
   - `@CacheEvict` 跨服务清除 `resonators::userId` 缓存解决"同步后表格不刷新"bug
   - 同步策略: `source='kurobbs'` 标记 + 全删全插, 不动 `source='manual'` 手填数据
+- **部署 + CI/CD**（✅ 完成）—— 全自动一键部署到公网：
+  - 阿里云轻量 2核2G + Ubuntu 22.04 + 2GB swap, 部署在 `http://8.145.47.57`
+  - 多阶段 Dockerfile（Maven build + JRE runtime / Node build + Nginx runtime, 镜像体积最小化）
+  - docker-compose 编排 6 个服务 + 健康检查 + 启动顺序 + 内存限制（JVM `-Xmx512m` + MySQL `innodb-buffer-pool-size=128M`）
+  - Nginx 反代 SPA + `try_files` 兜底 + SSE 关 buffering（流式 AI 必备）
+  - **12-factor 配置外部化**: 4 个密钥 `${ENV}` 注入, `.env` 文件 gitignore, key rotation 后公开仓库零密钥泄漏
+  - **MySQL 自动初始化**: schema.sql 挂 `/docker-entrypoint-initdb.d/` 首次启动自动建表
+  - **GitHub Actions CI/CD**: push 到 main 自动 build + push ghcr + SSH 部署, ~5 分钟全自动化, 工作流支持镜像层缓存(`type=gha`)加速 10x
+  - 公网端口加固: 仅暴露 80 / 8000(调试) / 15672(MQ UI), DB 端口全内网
 
 ### 计划
 
 - AI 第二遍：Python LangChain 微服务版（python-microservice 分支）
-- 部署 + CI/CD（docker-compose 编排全套 + GitHub Actions 自动构建镜像）
+- **AI 服务防御加固**: 注册限流 / 邮箱验证 / 用户级 token bucket / 智谱余额警报（Phase 4d）
 - 个人统计可视化页面（ECharts 角色属性分布 / 培养进度图）
 - 全文搜索（Elasticsearch：角色模糊搜 + 日志聚合）
 - (可选) MCP 探索 / 抽卡记录（需游戏内一次性 URL，非账号 API）
@@ -76,13 +85,17 @@
 | 构建 | Maven Wrapper / npm |
 | 工具 | Lombok / Jackson 3 |
 
+| CI/CD | GitHub Actions（push → 自动 build + push ghcr.io + SSH 部署）|
+| 镜像仓库 | GitHub Container Registry (ghcr.io) |
+| 部署 | 阿里云轻量服务器 + Docker + Nginx |
+
 ### 计划引入
 
 | 阶段 | 技术 |
 |------|------|
-| CI/CD | GitHub Actions |
 | 搜索 | Elasticsearch |
 | Python AI 版 | FastAPI + LangChain（python-microservice 分支）|
+| 限流 | Spring Boot 限流 / Resilience4j |
 
 ---
 
@@ -301,10 +314,11 @@ docker-compose.yml                   多容器编排
 | 14e | 互联网搜索工具（Tavily: POST + Bearer + 多层嵌套 DTO）| ✅ 完成 |
 | 15 | Vue3 前端：登录 + CRUD + AI 流式聊天 + 视觉美化 | ✅ 完成 |
 | 16 | 库街区集成：HTTP Toolkit 抓包 + form-urlencoded + 嵌套 JSON + UPSERT + @CacheEvict 跨服务失效 + BizException | ✅ 完成 |
-| 17 | **部署 + CI/CD**（docker-compose 全栈编排 + GitHub Actions）| 🚧 下一站 |
-| 18 | AI - Python LangChain 微服务版（python-microservice 分支）| ⏳ 计划中 |
-| 19 | Elasticsearch 搜索 | ⏳ 计划中 |
-| 20 | AI -（可选）MCP 探索 | ⏳ 可选 |
+| 17 | 部署 + CI/CD（多阶段 Dockerfile + docker-compose 6 服务编排 + Nginx 反代 SPA + ghcr.io + GitHub Actions 自动部署 + 阿里云上线 + 12-factor 配置外部化）| ✅ 完成 |
+| 18 | **AI 服务防御加固**（限流 / 关公开注册 / 余额警报）| 🚧 下一站 |
+| 19 | AI - Python LangChain 微服务版（python-microservice 分支）| ⏳ 计划中 |
+| 20 | Elasticsearch 搜索 | ⏳ 计划中 |
+| 21 | AI -（可选）MCP 探索 | ⏳ 可选 |
 
 每个阶段都以「先理解概念 → 在项目里实战 → 留下能 git 回看的实例」为标准。
 
@@ -439,6 +453,20 @@ LLM 调用通常很慢（5-10 秒），AI 助手可以**复用现有的 RabbitMQ
 - **空文件踩坑 + IDE 异步保存**：从子目录 `cd mc_recorder_web && git add .` 只 stage 该目录文件；同时 IDEA 还在后台自动保存 Java 代码（100ms-1s 延迟），紧接着 commit 出去的可能是"空骨架"（仅 `package + class {}` 4 行）。Symptom：git log 显示 file added 但只有 4 行。预防：① 在项目根目录跑 `git add .`；② commit 前 **`git diff --staged` 看一眼真实内容**；③ Ctrl+S 手动保存别赖自动；④ `git show HEAD` 验证 commit 完整
 - **HTTP/2 Stream Reset 是网络瞬时失败, 不是代码 bug**：`okhttp3.internal.http2.StreamResetException: stream was reset: CANCEL` 通常是上游 LLM 服务网关临时过载/抖动主动 cancel 连接。互联网服务 SLA 几乎不可能 100%，1-5‰ 概率的瞬时失败是分布式系统常态。Spring AI M8 milestone 没内置自动重试，需要时手动加 `@Retryable` 或 Resilience4j。学习项目阶段：**重问一次 90% 会好**，不必上重试机制
 - **Spring AI 流式 + Tool + Advisor 三件套的 buffering 现实**：理论上 `.stream()` 应该字符级流式，实际上 M8 milestone 在多 advisor 链 + tool calling 场景下**会先 buffer 完整响应再一起发**——浏览器收到的是一个大包（看 HTTP Toolkit 时间戳几乎相同）。解法：**前端假流式**（typewriter effect with `setTimeout` per char），UX 等同真流式。业界 ChatGPT 早期也用这套，体验为重
+- **多阶段 Dockerfile 镜像体积优化**：单阶段 `FROM eclipse-temurin:17-jre + COPY *.jar` 需要本地预先 `mvnw package`，CI/CD 跑不通。多阶段：`FROM maven:3.9-eclipse-temurin-17 AS builder` 跑 mvn package，`FROM eclipse-temurin:17-jre` 拷贝 jar 出来——最终镜像 ~660MB（含 JRE+jar）而不是 1.5GB+（含 Maven+源码+依赖缓存）。前端同理：`FROM node:22-alpine` 跑 build，`FROM nginx:alpine` 装 dist，最终 ~30MB
+- **Nginx 反代生产配置 3 个关键**: ① `proxy_pass http://backend:8000` 用 docker-compose 服务名（不是 localhost），容器间靠 Docker 内部 DNS 解析；② `proxy_buffering off` + `proxy_read_timeout 600s`，否则 SSE 流式响应被 Nginx 缓冲全攒一起，字蹦不出来；③ `try_files $uri $uri/ /index.html` SPA 兜底——用户刷新 `/resonators` 不返 404 而是返 index.html，让 Vue 路由接管，否则刷新就崩
+- **Docker 容器间通信 vs 端口暴露**：`ports: 3306:3306` ≠ 容器间通信前提。docker-compose 自动建私有网络 + 服务名 DNS，容器之间 `jdbc:mysql://mysql:3306` 不依赖 ports 字段。`ports` 只控制"宿主能否访问"。生产环境只暴露 80（frontend）和必要的调试端口，DB / Redis / MQ 全内网，扫描不到 = 弱密码也安全
+- **12-factor 配置外部化 + 镜像公开的安全模型**：硬编码 API key 在 `application.yaml` → 公开仓库泄漏。解法分 3 层：① 源码层 `${ENV:placeholder}` 占位符；② JwtUtil 用 `@Value` + `@PostConstruct` 注入；③ 运行层 `.env` 文件（gitignore）注入 docker-compose `environment: ${VAR}`。公开镜像 + 公开 repo + 私有 .env = 零密钥泄漏。Key rotation 是配套必做——历史 git commit 含老 key 但已 revoke 即无威胁
+- **MySQL 自动初始化 schema 的 docker-entrypoint-initdb.d 机制**：官方 mysql 镜像首次启动（数据卷空）时自动扫描 `/docker-entrypoint-initdb.d/`，按字母顺序跑里面的 `*.sql` / `*.sh`。docker-compose 挂载 `./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro` → 全新部署一行命令 `docker compose up -d` 自动建所有业务表。**坑**: 只在卷为空时跑，复用旧卷不触发。重置: `docker volume rm <volume>` 后重启
+- **GitHub Container Registry (ghcr.io) 推送的 3 层权限**：① workflow YAML 写 `permissions: packages: write`（声明意图）；② repo Settings → Actions → Workflow permissions 选 "Read and write permissions"（允许声明）；③ Package settings → Manage Actions access → Add repo with Write role（包级显式授权）。任意一层缺失都 `denied: permission_denied: write_package`。设计目的：防 fork 的 PR 偷推恶意镜像
+- **GitHub Actions secrets vs PAT 三类 token 用途**：① `GITHUB_TOKEN`（workflow 自带，无需配置，仅当前 workflow 用，跑完销毁，最安全）；② **PAT**（你账号长期 token，给 docker login 用，敏感）；③ **SSH 私钥 + 服务器 IP**（部署用，作为 secret 加密存储）。CI/CD 部署链路: GITHUB_TOKEN 推 ghcr.io + SSH 私钥连服务器 + appleboy/ssh-action 跑 docker compose pull
+- **Windows OpenSSH 私钥权限严格要求**：PowerShell 用 `ssh -i xxx.pem` 报 `WARNING: UNPROTECTED PRIVATE KEY FILE!` 是 Windows 默认文件权限"所有用户可读"导致。修法 `icacls xxx.pem /inheritance:r` 清继承 + `icacls xxx.pem /grant:r "Administrator:R"` 只给自己读权限。注意：`$env:USERNAME:R` 在 PowerShell 因 `:` 是特殊符号解析失败，要用字面 `"Administrator:R"` 或 `${env:USERNAME}:R`
+- **国内服务器 Docker 镜像加速器变更**：USTC 中科大镜像 2024 起对非校内 IP 不开放（DNS 都解析不到 `dial tcp: lookup ... no such host`）。换稳定的: docker.1panel.live / docker.m.daocloud.io / hub-mirror.c.163.com，或阿里云专属镜像加速器（控制台拿）。**关键**: 镜像加速只影响 docker.io 镜像，ghcr.io 走自己网络
+- **生产 AI 应用的余额防御 + RAG 调用链**：智谱 chat 和 embedding 是**独立计费**，chat 有余额 ≠ embedding 有余额。RAG QuestionAnswerAdvisor 每次问题都调 embedding-3，embedding 配额耗尽 → 整个 AI 链路挂（不是只 RAG 挂）。debug 看 stack trace 最底层 `Caused by: RateLimitException: 429`。AI SaaS 生产防御 5 层: ① 关公开注册或 CAPTCHA；② 邮箱验证；③ Nginx IP 限流；④ Redis token bucket 用户级限流；⑤ 余额低告警。学习项目至少做 ①（关 register endpoint）
+- **宝塔面板 vs Docker 二选一**：阿里云轻量预装 Docker 的镜像被你装宝塔后冲突（宝塔自带 Nginx/MySQL 占用 80/3306）。一台机器 = 一种部署哲学。Docker 全栈方案直接走 docker compose，重装系统选纯 Ubuntu 或 Ubuntu+Docker 镜像，**不要再装宝塔**
+- **Docker 镜像 + tag 内容寻址原理**：`docker tag mc_recorder:latest ghcr.io/xxx/backend:latest` 不复制镜像数据，只多一个"指针"指向同一 sha256 哈希。`docker images` 看到两行但磁盘只占一份。`docker push` 推的是内容（按层 sha256 寻址），所以"刚 push 过的层"再 push 秒过——Docker 跟 git / IPFS / 区块链一样是 content-addressable storage
+- **bash 命令传 password 警告**：`docker exec -it mysql-wuwa mysql -uroot -proot123 ...` 报 `Using a password on the command line interface can be insecure` 因为命令历史和 ps 列表能看到密码。生产环境用 `MYSQL_PWD` 环境变量或 `~/.my.cnf` 配置文件。学习项目里这警告**忽略**——服务器只有你登录，进程列表暴露不算威胁
+- **Spring Security 公开 register 端点的滥用风险**：`/api/auth/register` 任何人能调 + AI 端点对所有登录用户开放 = 路人/机器人注册后帮你烧 LLM 配额。表面看 8 元被花完疑似被刷，深查（user 表只 3 行 + chat memory 8 条）证清白——但风险真实。学到: 公开部署 + 公开注册 + 公开 AI = 必上限流。最简: SecurityConfig 加 `.requestMatchers("/api/auth/register").denyAll()` 关掉公开注册
 
 ---
 
