@@ -23,6 +23,8 @@ services:
     #   - "3306:3306"
     volumes:
       - wuwa_mysql_data:/var/lib/mysql
+      # ⭐ 挂载 schema.sql 进自动初始化目录, 首次启动自动建表
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
       interval: 10s

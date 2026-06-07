@@ -7,6 +7,11 @@ const routes = [
         name: 'Login',
         component: () => import('../views/LoginView.vue')
     },
+    {
+        path: '/register',
+        name: 'Register',
+        component: () => import('../views/RegisterView.vue')
+    },
     // 主应用: 用 MainLayout 当壳, 里面切子路由
     {
         path: '/',

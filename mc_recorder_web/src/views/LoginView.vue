@@ -32,7 +32,7 @@
         </el-form-item>
 
         <div class="text-center text-sm text-gray-500">
-          还没账号? <a class="text-blue-500 cursor-pointer hover:underline">注册</a>
+          还没账号? <a class="text-blue-500 cursor-pointer hover:underline" @click="router.push('/register')">注册</a>
         </div>
       </el-form>
     </el-card>
