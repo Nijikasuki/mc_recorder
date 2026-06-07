@@ -8,7 +8,8 @@ export function sendChat(message){
 // 不能用 axios(它不支持流式响应), 用浏览器原生 fetch
 export async function streamChat(message, onChunk) {
     const token = localStorage.getItem('token')
-    const url = `http://localhost:8000/api/ai/chat-stream?message=${encodeURIComponent(message)}`
+    // 用相对路径, 让 vite proxy / Nginx 转发, 不写死 localhost
+    const url = `/api/ai/chat-stream?message=${encodeURIComponent(message)}`
 
     const response = await fetch(url, {
         method: 'POST',

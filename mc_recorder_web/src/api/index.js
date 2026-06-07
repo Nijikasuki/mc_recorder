@@ -1,7 +1,11 @@
 import axios from 'axios'
 
+// baseURL 用相对路径 /api:
+//   - 开发: vite.config.js 配 proxy → 转发到 localhost:8000
+//   - 生产: Nginx 配 location /api/ → 转发到 backend:8000
+// 这样代码一份, 不用判断环境
 const api = axios.create({
-baseURL: 'http://localhost:8000/api',
+baseURL: '/api',
 timeout: 30000,
 })
 

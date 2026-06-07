@@ -1,41 +1,42 @@
-# 一键编排：mysql + redis + 你的应用，三个容器同时启动并联网
-# 启动：docker compose up -d
-# 停止：docker compose down  (容器删，数据卷保留)
-# 看日志：docker compose logs -f app
+# ============================================================
+# 一键编排全栈: 6 个服务 (mysql + redis + pgvector + rabbitmq + backend + frontend)
+#
+# 启动:    docker compose up -d
+# 停止:    docker compose down            (删容器, 保留数据卷)
+# 看日志:   docker compose logs -f backend
+# 重启某个: docker compose restart backend
+#
+# 访问:    http://localhost  (Nginx 80, 转发到 Vue/后端)
+# ============================================================
 
 services:
 
   # ============================================================
-  # 服务 1：MySQL  (已写好做模板)
+  # 服务 1: MySQL — 业务数据
   # ============================================================
   mysql:
     image: mysql:8.0
     container_name: mysql-wuwa
-    restart: unless-stopped              # 容器异常退出自动重启
+    restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root123       # 等价于 docker run 的 -e
+      MYSQL_ROOT_PASSWORD: root123
       MYSQL_DATABASE: wuwa_record
       TZ: Asia/Shanghai
-    command: --default-time-zone=+08:00  # 启动命令的额外参数
+    command: --default-time-zone=+08:00
     ports:
-      - "3306:3306"                      # 宿主:容器
+      - "3306:3306"                # 暴露给宿主机, 方便 IDEA Database 工具连
     volumes:
-      - wuwa_mysql_data:/var/lib/mysql   # 挂载下面声明的卷
-
+      - wuwa_mysql_data:/var/lib/mysql
+    healthcheck:                   # 健康检查: 启动后能 ping 通才算"健康"
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s            # 首次启动给 30 秒预热
 
   # ============================================================
-  # 服务 2：Redis  (TODO 你写)
+  # 服务 2: Redis — 缓存
   # ============================================================
-  # 字段（对照 mysql 段照葫芦画瓢）：
-  #   image:           redis:7
-  #   container_name:  redis-wuwa
-  #   restart:         unless-stopped
-  #   ports:           6379:6379
-  # 不需要 environment / command / volumes —— 缓存不用持久化、不用配密码
-  #
-  # 注意 YAML 缩进：每层 2 空格，对齐 mysql 段
-  #
-  # ↓↓↓ 你在这下面写 redis 段 ↓↓↓
   redis:
     image: redis:7
     container_name: redis-wuwa
@@ -44,51 +45,85 @@ services:
       - "6379:6379"
 
   # ============================================================
-  # 服务 3：App  你的应用 (TODO 你写)
+  # 服务 3: pgvector — 向量库 (鸣潮百科)
   # ============================================================
-  # 字段：
-  #   image:           mc_recorder:latest          ← 你刚 build 的镜像
-  #   container_name:  mc_recorder-app
-  #   restart:         unless-stopped
-  #   ports:           8000:8000
-  #
-  #   depends_on:                                   ← 列表语法，控制启动顺序
-  #     - mysql
-  #     - redis
-  #
-  #   environment:                                  ← 关键！覆盖 application.yaml 里的主机名
-  #     # URL 含 & 必须单引号包，否则 YAML 解析会出错
-  #     SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
-  #     SPRING_DATASOURCE_USERNAME: root
-  #     SPRING_DATASOURCE_PASSWORD: root123
-  #     SPRING_DATA_REDIS_HOST: redis              ← 这里写"服务名 redis"，不是 localhost！
-  #     SPRING_DATA_REDIS_PORT: 6379
-  #
-  # ↓↓↓ 你在这下面写 app 段 ↓↓↓
-  app:
-    image: mc_recorder:latest
-    container_name: mc_recorder-app
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: pgvector-wuwa
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wuwa_vectors
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+
+  # ============================================================
+  # 服务 4: RabbitMQ — 消息队列
+  # ============================================================
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-wuwa
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "5672:5672"                # AMQP 协议端口 (后端连这个)
+      - "15672:15672"              # 管理 UI (浏览器看队列, guest/guest)
 
+  # ============================================================
+  # 服务 5: Backend — Spring Boot 后端
+  # ============================================================
+  backend:
+    image: mc_recorder:latest
+    container_name: mc_recorder-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"                # 暴露给宿主机, 方便直接调 /api 调试
     depends_on:
-      - mysql
-      - redis
-
+      mysql:
+        condition: service_healthy   # 等 mysql 健康检查通过才启动
+      redis:
+        condition: service_started
+      pgvector:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
     environment:
+      # ----- MySQL -----
       SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123
+      # ----- pgvector (你 DatabaseConfig 里的自定义路径) -----
+      SPRING_DATASOURCE_PGVECTOR_URL: 'jdbc:postgresql://pgvector:5432/wuwa_vectors'
+      SPRING_DATASOURCE_PGVECTOR_USERNAME: postgres
+      SPRING_DATASOURCE_PGVECTOR_PASSWORD: postgres
+      # ----- Redis -----
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
+      # ----- RabbitMQ -----
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: guest
+      SPRING_RABBITMQ_PASSWORD: guest
 
-
-
+  # ============================================================
+  # 服务 6: Frontend — Vue + Nginx
+  # ============================================================
+  frontend:
+    image: mc_recorder-web:latest
+    container_name: mc_recorder-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"                    # 这是用户访问入口! 浏览器打 http://localhost
+    depends_on:
+      - backend                    # frontend 启动前等 backend 就绪
 
 # ============================================================
-# 顶层 volumes 声明：复用你已有的卷，老数据保留
+# 顶层 volumes 声明: 复用已有的命名卷 (你旧数据安全保留)
 # ============================================================
 volumes:
   wuwa_mysql_data:
-    external: true                       # 用外部已存在的卷，不要新建
+    external: true               # 外部已存在, 别新建
+  pgvector_data:
+    external: true               # 同上
