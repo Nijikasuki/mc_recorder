@@ -39,3 +39,8 @@ http-test/kurobbs-bind.http
 ### 环境变量 / 真实密钥 (永远不进 git) ###
 .env
 application-local.yaml
+
+### 学习笔记 / Claude Code 内部文件 (只本地保留) ###
+NOTES.md
+CLAUDE.md
+.claude/
