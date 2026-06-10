@@ -10,12 +10,6 @@ spring:
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
-
-    pgvector:
-      url: jdbc:postgresql://localhost:5432/wuwa_vectors
-      username: ${POSTGRES_USERNAME:postgres}
-      password: ${POSTGRES_PASSWORD:postgres}
-      driver-class-name: org.postgresql.Driver
   data:
     redis:
       host: localhost
@@ -25,22 +19,6 @@ spring:
     port: 5672
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
-  ai:
-    openai:
-      base-url: https://open.bigmodel.cn/api/paas/v4
-      # ⭐ 真实密钥从环境变量读, 不在源码里
-      api-key: ${ZHIPU_API_KEY:set-via-env}
-      chat:
-        completions-path: /chat/completions
-        model: glm-4-plus
-      embedding:
-        embeddings-path: /embeddings
-        model: embedding-3
-    chat:
-      memory:
-        repository:
-          jdbc:
-            initialize-schema: always
 
 mybatis:
   configuration:
@@ -50,13 +28,9 @@ mybatis:
 jwt:
   secret: ${JWT_SECRET:mc-recorder-dev-secret-key-change-it-in-production-2026}
 
-github:
-  base-url: https://api.github.com
-  token: ${GITHUB_TOKEN:set-via-env}
-
-tavily:
-  base-url: https://api.tavily.com
-  api-key: ${TAVILY_API_KEY:set-via-env}
+# ⭐ Python AI 服务地址 (将来重写 AiController 用 HTTP 转发)
+python-ai:
+  base-url: ${PYTHON_AI_URL:http://localhost:8001}
 
 kurobbs:
   base-url: https://api.kurobbs.com
