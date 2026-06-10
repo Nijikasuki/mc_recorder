@@ -1,23 +1,27 @@
 # ============================================================
 # GitHub Actions: 自动部署到阿里云服务器
 #
-# 触发: push 到 main 分支 (改任何代码都自动跑)
+# ⏸️ Phase 5 重构期间: 暂关自动 push 触发, 改为只手动触发
+#    原因: Python 微服务未就绪, 推新版到线上会让 AI 模块 503
+#    Phase 5 完成 (Python 跑通 + Java 转发 + docker-compose 加进去) 后,
+#    解开下面 push 两行恢复自动部署
+#
+# 触发: 只手动 (Actions 页面 Run workflow)
 # 流程:
 #   1. checkout 代码
-#   2. 登录 ghcr.io (用 GitHub 自带 token, 无需额外配置)
+#   2. 登录 ghcr.io
 #   3. 构建 backend 镜像 + 推 ghcr
 #   4. 构建 frontend 镜像 + 推 ghcr
 #   5. SSH 到服务器, docker compose pull + up
-#
-# 跑完 → 浏览器 http://8.145.47.57 看到新版
 # ============================================================
 
 name: Deploy to Aliyun
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:    # 也能手动触发 (Actions 页面点按钮)
+  # ⏸️ Phase 5 暂关 (见上方注释), 完成后解开
+  # push:
+  #   branches: [main]
+  workflow_dispatch:    # 手动触发 (Actions 页面点 Run workflow)
 
 env:
   REGISTRY: ghcr.io
