@@ -6,7 +6,7 @@ export function sendChat(message){
 
 // ⭐  新增: 流式版本
 // 不能用 axios(它不支持流式响应), 用浏览器原生 fetch
-export async function streamChat(message, onChunk) {
+export async function streamChat(message, onChunk, signal) {
     const token = localStorage.getItem('token')
     // 用相对路径, 让 vite proxy / Nginx 转发, 不写死 localhost
     const url = `/api/ai/chat-stream?message=${encodeURIComponent(message)}`
@@ -15,7 +15,8 @@ export async function streamChat(message, onChunk) {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
-        }
+        },
+        signal,    // ⭐ AbortController.signal, 用于取消请求
     })
 
     if (!response.ok) {
