@@ -41,7 +41,11 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of(
                 "http://localhost:5173",   // Vite dev server
-                "http://localhost:4173"    // Vite preview server
+                "http://localhost:4173",    // Vite preview server
+                "http://tethys.xin",        // ⭐  加这个
+                "https://tethys.xin",       // ⭐  加这个 (未来上 HTTPS 用)
+                "http://8.145.47.57",       // ⭐  加这个 (IP 访问保险)
+                "http://8.145.47.57:80"     // ⭐  加这个 (有的浏览器会带端口)
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
