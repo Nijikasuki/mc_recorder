@@ -22,3 +22,5 @@ htmlcov/
 build/
 dist/
 *.egg-info/
+
+http-test
