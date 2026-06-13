@@ -24,6 +24,7 @@ async def chat_endpoint(req: ChatRequest) -> ChatResponse:
     content = await service.chat(
         user_msg=req.message,
         thread_id=thread_id,
+        enable_search=req.enable_search,
     )
     return ChatResponse(content=content, model=settings.llm_model)
 
@@ -32,11 +33,13 @@ async def chat_endpoint(req: ChatRequest) -> ChatResponse:
 async def chat_stream_endpoint(req: ChatRequest):
     """流式聊天: SSE 一边生成一边推."""
     thread_id = _build_thread_id(req)
+
     async def event_generator():
         async for chunk in service.chat_stream(
-                user_msg=req.message,
-                thread_id=thread_id,):
-            # SSE 协议格式: "data: <内容>\n\n"
+            user_msg=req.message,
+            thread_id=thread_id,
+            enable_search=req.enable_search,
+        ):
             yield f"data: {chunk}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")

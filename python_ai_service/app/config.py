@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     llm_model: str = "glm-4-plus"
     llm_temperature: float = 0.7
     postgres_url: str
+    tavily_api_key: str
+    github_token: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
