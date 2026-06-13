@@ -18,6 +18,8 @@ SYSTEM_PROMPT = """\
 - 工具调用 (按上下文动态启用):
   - get_current_time: 查当前时间
   - tavily_search: 联网搜索 (需用户开启"联网搜索"开关)
+  - get_repo_info: 查 GitHub 仓库基本信息 (问"X 仓库怎么样"/"多少 star"/"什么语言"时调用)
+  - get_repo_activities: 查 GitHub 仓库最近活动 (问"最近这个项目在搞什么"/"最新 commit"时调用)
 
 **行为规则**:
 - 用简洁专业的中文回答, 不啰嗦
