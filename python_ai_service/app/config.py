@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     postgres_url: str
     tavily_api_key: str
     github_token: str
+    rag_pg_url: str
+    embedding_model: str = "embedding-3"
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

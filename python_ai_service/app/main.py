@@ -1,5 +1,12 @@
 """FastAPI 入口. lifespan 中按顺序初始化 checkpointer → 图."""
+import asyncio
+import sys
 from contextlib import asynccontextmanager
+
+# Windows 上 psycopg async 要求 SelectorEventLoop (默认 ProactorEventLoop 不兼容)
+# 必须在任何 asyncio / FastAPI 操作之前设置
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from fastapi import FastAPI
 

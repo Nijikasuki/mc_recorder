@@ -25,6 +25,7 @@ async def chat_endpoint(req: ChatRequest) -> ChatResponse:
         user_msg=req.message,
         thread_id=thread_id,
         enable_search=req.enable_search,
+        enable_knowledge=req.enable_knowledge,
     )
     return ChatResponse(content=content, model=settings.llm_model)
 
@@ -39,6 +40,7 @@ async def chat_stream_endpoint(req: ChatRequest):
             user_msg=req.message,
             thread_id=thread_id,
             enable_search=req.enable_search,
+            enable_knowledge=req.enable_knowledge,
         ):
             yield f"data: {chunk}\n\n"
 

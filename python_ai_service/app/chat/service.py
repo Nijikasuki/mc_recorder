@@ -6,12 +6,18 @@ from langchain_core.messages import AIMessageChunk
 from app import graph as graph_pkg
 
 
-async def chat(user_msg: str, thread_id: str, enable_search: bool = False) -> str:
+async def chat(
+    user_msg: str,
+    thread_id: str,
+    enable_search: bool = False,
+    enable_knowledge: bool = False,
+) -> str:
     """非流式: 等 LLM 完整答案返回."""
     config = {
         "configurable": {
             "thread_id": thread_id,
             "enable_search": enable_search,
+            "enable_knowledge": enable_knowledge,
         }
     }
     result = await graph_pkg.compiled_graph.ainvoke(
@@ -21,12 +27,18 @@ async def chat(user_msg: str, thread_id: str, enable_search: bool = False) -> st
     return result["messages"][-1].content
 
 
-async def chat_stream(user_msg: str, thread_id: str, enable_search: bool = False) -> AsyncIterator[str]:
+async def chat_stream(
+    user_msg: str,
+    thread_id: str,
+    enable_search: bool = False,
+    enable_knowledge: bool = False,
+) -> AsyncIterator[str]:
     """流式: 一个 token 一个 yield."""
     config = {
         "configurable": {
             "thread_id": thread_id,
             "enable_search": enable_search,
+            "enable_knowledge": enable_knowledge,
         }
     }
     async for chunk, _metadata in graph_pkg.compiled_graph.astream(
