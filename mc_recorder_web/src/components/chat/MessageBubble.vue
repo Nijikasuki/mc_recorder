@@ -1,25 +1,28 @@
 <template>
-  <div
-    class="flex gap-3"
-    :class="isUser ? 'justify-end' : 'justify-start'"
-  >
+  <div class="flex gap-3" :class="isUser ? 'justify-end' : 'justify-start'">
     <!-- AI 头像 -->
-    <div v-if="!isUser" class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 text-base shadow-lg shadow-purple-500/20">
-      🤖
+    <div
+      v-if="!isUser"
+      class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm shadow-sm"
+    >
+      <span class="text-white">✨</span>
     </div>
 
     <!-- 消息气泡 -->
     <div
-      class="max-w-2xl rounded-2xl px-4 py-3 shadow-lg transition-all duration-300 hover:shadow-xl"
+      class="max-w-[75%] rounded-2xl px-4 py-2.5 text-[14px] leading-relaxed transition-shadow duration-200"
       :class="isUser
-        ? 'bg-gradient-to-br from-blue-500/90 to-purple-500/90 text-white shadow-purple-500/20'
-        : 'border border-white/10 bg-white/[0.05] text-gray-100 backdrop-blur-xl shadow-blue-500/5'"
+        ? 'bg-gray-900 text-white'
+        : 'bg-white text-gray-800 ring-1 ring-gray-200/80 shadow-sm hover:shadow'"
     >
-      <pre class="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">{{ msg.content }}</pre>
+      <pre class="whitespace-pre-wrap break-words font-sans">{{ msg.content }}</pre>
     </div>
 
     <!-- 用户头像 -->
-    <div v-if="isUser" class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-pink-400 to-orange-400 text-sm font-bold text-white shadow-lg shadow-pink-500/20">
+    <div
+      v-if="isUser"
+      class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-[12px] font-semibold text-white shadow-sm"
+    >
       {{ userInitial }}
     </div>
   </div>

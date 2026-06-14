@@ -1,34 +1,24 @@
 <template>
-  <header class="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-6 py-4 backdrop-blur-xl">
-    <div class="flex items-center gap-3">
-      <!-- AI 头像 -->
+  <header class="flex items-center justify-between border-b border-gray-200/80 bg-white/80 px-6 py-3 backdrop-blur-xl">
+    <div class="flex items-center gap-2.5">
       <div class="relative">
-        <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 text-xl shadow-lg shadow-purple-500/30">
-          🤖
+        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-base shadow-sm">
+          <span class="text-white">✨</span>
         </div>
-        <div class="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center">
-          <span class="absolute h-full w-full animate-ping rounded-full bg-green-400/60"></span>
-          <span class="relative h-2 w-2 rounded-full bg-green-400"></span>
-        </div>
+        <span class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-400"></span>
       </div>
-
-      <!-- 标题 -->
       <div>
-        <h2 class="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-base font-bold text-transparent">
-          Tethys
-        </h2>
-        <p class="text-xs text-gray-500">
-          鸣潮智能助手 · GLM-4-plus
-        </p>
+        <h2 class="text-[14px] font-semibold tracking-tight text-gray-900">Tethys</h2>
+        <p class="text-[11px] text-gray-500">鸣潮智能助手 · GLM-4-plus</p>
       </div>
     </div>
 
-    <!-- 右侧装饰标签 -->
-    <div class="hidden items-center gap-2 sm:flex">
-      <span class="rounded-full border border-blue-400/20 bg-blue-400/10 px-3 py-1 text-xs text-blue-300">
+    <!-- 标签 -->
+    <div class="hidden items-center gap-1.5 sm:flex">
+      <span class="rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-600">
         LangGraph
       </span>
-      <span class="rounded-full border border-purple-400/20 bg-purple-400/10 px-3 py-1 text-xs text-purple-300">
+      <span class="rounded-md bg-violet-50 px-2 py-0.5 text-[11px] font-medium text-violet-600">
         RAG
       </span>
     </div>

@@ -1,22 +1,17 @@
 <template>
   <div class="flex gap-3">
-    <!-- AI 头像 (脉冲) -->
-    <div class="relative flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-500 text-base shadow-lg shadow-purple-500/30">
-      🤖
-      <span class="absolute inset-0 rounded-xl bg-purple-400/30 animate-ping"></span>
+    <div class="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-sm shadow-sm">
+      <span class="text-white">✨</span>
     </div>
 
-    <!-- 思考气泡 -->
-    <div class="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 backdrop-blur-xl">
-      <div class="flex items-center gap-3">
-        <!-- 三点律动 -->
+    <div class="rounded-2xl bg-white px-4 py-2.5 shadow-sm ring-1 ring-gray-200/80">
+      <div class="flex items-center gap-2.5">
         <div class="flex gap-1">
-          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-400" style="animation-delay: 0ms"></span>
-          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400" style="animation-delay: 150ms"></span>
-          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-pink-400" style="animation-delay: 300ms"></span>
+          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-indigo-400" style="animation-delay: 0ms"></span>
+          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400" style="animation-delay: 150ms"></span>
+          <span class="h-1.5 w-1.5 animate-bounce rounded-full bg-purple-400" style="animation-delay: 300ms"></span>
         </div>
-        <!-- 文字 -->
-        <span class="text-sm text-gray-300">{{ thinkingText }}</span>
+        <span class="text-[13px] text-gray-600">{{ thinkingText }}</span>
       </div>
     </div>
   </div>
@@ -30,9 +25,9 @@ const props = defineProps({
 })
 
 const TEXT_MAP = {
-  retrieve_rag: '🔍 正在检索鸣潮百科',
-  llm: '🧠 正在思考',
-  tools: '🔧 正在调用工具',
+  retrieve_rag: '检索鸣潮百科',
+  llm: '思考中',
+  tools: '调用工具',
 }
 
 const thinkingText = computed(() => TEXT_MAP[props.nodeName] || '思考中')

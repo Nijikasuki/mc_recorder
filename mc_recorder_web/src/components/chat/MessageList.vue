@@ -1,50 +1,44 @@
 <template>
-  <div
-    ref="listRef"
-    class="flex-1 overflow-y-auto scroll-smooth px-6 py-6"
-  >
-    <!-- 空状态: 示例 prompts -->
-    <div v-if="messages.length === 0 && !loading" class="mx-auto mt-12 max-w-2xl text-center">
-      <div class="mb-3 text-6xl">👋</div>
-      <h1 class="bg-gradient-to-r from-blue-300 via-purple-300 to-pink-300 bg-clip-text text-2xl font-bold text-transparent">
-        你好, 我是 Tethys
-      </h1>
-      <p class="mt-2 text-sm text-gray-400">试试问我以下问题</p>
+  <div ref="listRef" class="flex-1 overflow-y-auto scroll-smooth">
+    <div class="mx-auto max-w-5xl px-8 py-6">
+      <!-- 空状态: 示例 prompts -->
+      <div v-if="messages.length === 0 && !loading" class="mt-10 text-center">
+        <div class="mb-4 text-5xl">👋</div>
+        <h1 class="text-2xl font-semibold tracking-tight text-gray-900">
+          你好, 我是 Tethys
+        </h1>
+        <p class="mt-2 text-sm text-gray-500">试试问我以下问题</p>
 
-      <div class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button
-          v-for="(prompt, idx) in samplePrompts"
-          :key="prompt"
-          @click="$emit('send-prompt', prompt)"
-          class="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-left text-sm text-gray-300 backdrop-blur-xl transition-all duration-300 ease-out hover:scale-[1.02] hover:border-blue-400/30 hover:bg-white/[0.06] hover:shadow-xl hover:shadow-blue-500/10 active:scale-[0.98]"
-          :style="{ animationDelay: `${idx * 80}ms` }"
-        >
-          <span class="block text-gray-200 transition-colors group-hover:text-white">
+        <div class="mt-8 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+          <button
+            v-for="prompt in samplePrompts"
+            :key="prompt"
+            @click="$emit('send-prompt', prompt)"
+            class="group rounded-xl border border-gray-200/80 bg-white p-3.5 text-left text-[13px] text-gray-700 transition-all duration-200 hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm active:scale-[0.99]"
+          >
             {{ prompt }}
-          </span>
-        </button>
+          </button>
+        </div>
       </div>
+
+      <!-- 消息列表 -->
+      <TransitionGroup
+        v-else
+        tag="div"
+        class="space-y-4"
+        enter-active-class="transition-all duration-300 ease-out"
+        enter-from-class="opacity-0 translate-y-2"
+        enter-to-class="opacity-100 translate-y-0"
+      >
+        <MessageBubble
+          v-for="(msg, idx) in messages"
+          :key="idx"
+          :msg="msg"
+          :username="username"
+        />
+        <ThinkingIndicator v-if="loading" key="thinking" :node-name="thinkingNode" />
+      </TransitionGroup>
     </div>
-
-    <!-- 消息列表 -->
-    <TransitionGroup
-      v-else
-      tag="div"
-      class="space-y-4"
-      enter-active-class="transition-all duration-400 ease-out"
-      enter-from-class="opacity-0 translate-y-3"
-      enter-to-class="opacity-100 translate-y-0"
-    >
-      <MessageBubble
-        v-for="(msg, idx) in messages"
-        :key="idx"
-        :msg="msg"
-        :username="username"
-      />
-
-      <!-- 思考中提示 -->
-      <ThinkingIndicator v-if="loading" key="thinking" :node-name="thinkingNode" />
-    </TransitionGroup>
   </div>
 </template>
 
@@ -71,14 +65,10 @@ const samplePrompts = [
 
 const listRef = ref(null)
 
-// 自动滚动到底
 async function scrollToBottom() {
   await nextTick()
   if (listRef.value) {
-    listRef.value.scrollTo({
-      top: listRef.value.scrollHeight,
-      behavior: 'smooth',
-    })
+    listRef.value.scrollTo({ top: listRef.value.scrollHeight, behavior: 'smooth' })
   }
 }
 

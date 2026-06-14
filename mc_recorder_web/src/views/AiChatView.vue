@@ -28,8 +28,8 @@
         />
 
         <!-- 底部: 工具开关 + 输入框 -->
-        <div class="border-t border-white/5 bg-white/[0.02] px-6 py-4 backdrop-blur-xl">
-          <div class="mx-auto max-w-4xl space-y-3">
+        <div class="border-t border-gray-200/80 bg-white/80 px-8 py-3 backdrop-blur-xl">
+          <div class="mx-auto max-w-5xl space-y-2">
             <ToolToggleBar
               v-model:enableSearch="enableSearch"
               v-model:enableKnowledge="enableKnowledge"
@@ -96,7 +96,6 @@ async function handleDelete(id) {
         confirmButtonText: '删除',
         cancelButtonText: '取消',
         type: 'warning',
-        customClass: 'dark-confirm',
       }
     )
     store.deleteSession(id)
@@ -166,42 +165,3 @@ async function handleSend() {
 }
 </script>
 
-<style>
-/* 全局滚动条美化 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 3px;
-  transition: background 0.3s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-/* 平滑滚动 */
-html {
-  scroll-behavior: smooth;
-}
-
-/* 文本选中色 */
-::selection {
-  background: rgba(139, 92, 246, 0.35);
-  color: #fff;
-}
-
-/* Element Plus MessageBox 暗色化 */
-.dark-confirm {
-  background: rgba(20, 20, 30, 0.95) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  backdrop-filter: blur(16px);
-}
-</style>
