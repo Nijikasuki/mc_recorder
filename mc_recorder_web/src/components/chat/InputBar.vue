@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-end gap-2 rounded-xl border border-gray-200/80 bg-white p-2 shadow-sm transition-all duration-200 focus-within:border-indigo-300 focus-within:shadow-md focus-within:ring-2 focus-within:ring-indigo-100">
+  <div class="flex items-end gap-2 rounded-2xl border border-[#1F242C] bg-[#161B22] p-2 transition-all duration-200 focus-within:border-amber-400/40 focus-within:bg-[#1F242C]">
     <textarea
       ref="textareaRef"
       :value="modelValue"
@@ -9,18 +9,18 @@
       :disabled="loading"
       placeholder="问点什么... (Enter 发送, Shift+Enter 换行)"
       rows="1"
-      class="flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] text-gray-900 placeholder-gray-400 outline-none disabled:opacity-50"
+      class="flex-1 resize-none bg-transparent px-2 py-1.5 text-[14px] text-[#E6E6E8] placeholder-[#484F58] outline-none disabled:opacity-50"
       style="max-height: 180px"
     ></textarea>
 
     <button
       @click="$emit('send')"
       :disabled="loading || !modelValue.trim()"
-      class="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gray-900 text-white transition-all duration-200 hover:bg-gray-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+      class="group flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-500 text-[#0D1117] shadow-lg shadow-amber-500/20 transition-all duration-200 hover:brightness-110 hover:shadow-amber-500/40 active:scale-95 disabled:cursor-not-allowed disabled:bg-[#1F242C] disabled:from-[#1F242C] disabled:to-[#1F242C] disabled:text-[#484F58] disabled:shadow-none"
       title="发送 (Enter)"
     >
-      <svg v-if="!loading" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      <svg v-if="!loading" class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 5l7 7-7 7" />
       </svg>
       <svg v-else class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"></circle>

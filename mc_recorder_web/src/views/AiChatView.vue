@@ -28,7 +28,7 @@
         />
 
         <!-- 底部: 工具开关 + 输入框 -->
-        <div class="border-t border-gray-200/80 bg-white/80 px-8 py-3 backdrop-blur-xl">
+        <div class="border-t border-[#1F1F26] bg-[#0A0A0C] px-8 py-3">
           <div class="mx-auto max-w-5xl space-y-2">
             <ToolToggleBar
               v-model:enableSearch="enableSearch"

@@ -1,10 +1,10 @@
 <template>
-  <aside class="flex h-full w-64 flex-shrink-0 flex-col border-r border-gray-200/80 bg-gray-50/50">
-    <!-- 新对话按钮 -->
+  <aside class="flex h-full w-64 flex-shrink-0 flex-col border-r border-[#1F242C] bg-[#0D1117]">
+    <!-- 顶部标题 + 新对话 -->
     <div class="p-3">
       <button
         @click="$emit('new-chat')"
-        class="group flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition-all duration-200 hover:bg-gray-800 active:scale-[0.98]"
+        class="group flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-2.5 text-[13px] font-semibold text-[#0D1117] shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-amber-500/30 hover:brightness-110 active:scale-[0.98]"
       >
         <svg class="h-4 w-4 transition-transform duration-200 group-hover:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -13,10 +13,16 @@
       </button>
     </div>
 
+    <!-- 会话列表标题 -->
+    <div class="flex items-center justify-between px-4 pb-2 pt-2">
+      <span class="text-[11px] font-medium uppercase tracking-wider text-[#8B949E]">最近会话</span>
+      <span class="text-[11px] text-[#484F58]">{{ sessions.length }}</span>
+    </div>
+
     <!-- 会话列表 -->
     <div class="flex-1 overflow-y-auto px-2 pb-4">
-      <div v-if="sessions.length === 0" class="mt-6 text-center text-xs text-gray-400">
-        点上面"新对话"开始
+      <div v-if="sessions.length === 0" class="mt-4 px-3 text-center">
+        <p class="text-[12px] text-[#484F58]">还没有会话</p>
       </div>
 
       <TransitionGroup
@@ -51,6 +57,5 @@ defineProps({
   currentSessionId: { type: String, default: null },
   username: { type: String, default: '' },
 })
-
 defineEmits(['new-chat', 'switch-session', 'delete-session'])
 </script>

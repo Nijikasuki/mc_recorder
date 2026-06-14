@@ -3,26 +3,29 @@
     @click="$emit('switch')"
     class="group relative cursor-pointer rounded-lg px-2.5 py-2 transition-all duration-150"
     :class="isActive
-      ? 'bg-white shadow-sm ring-1 ring-gray-200/80'
-      : 'hover:bg-white/70'"
+      ? 'bg-[#1F242C]'
+      : 'hover:bg-[#161B22]'"
   >
-    <div class="truncate pr-6 text-[13px] font-medium" :class="isActive ? 'text-gray-900' : 'text-gray-700'">
-      {{ session.title }}
-    </div>
-    <div class="mt-0.5 text-[11px] text-gray-400">
-      {{ formatDate(session.createdAt) }}
-    </div>
+    <div class="flex items-center justify-between gap-2">
+      <div class="min-w-0 flex-1">
+        <div class="truncate text-[13px]" :class="isActive ? 'text-[#E6E6E8] font-medium' : 'text-[#8B949E] group-hover:text-[#E6E6E8]'">
+          {{ session.title }}
+        </div>
+        <div class="mt-0.5 text-[11px]" :class="isActive ? 'text-amber-400/70' : 'text-[#484F58]'">
+          {{ formatDate(session.createdAt) }}
+        </div>
+      </div>
 
-    <!-- 删除按钮 -->
-    <button
-      @click.stop="$emit('delete')"
-      class="absolute right-1.5 top-2 flex h-5 w-5 items-center justify-center rounded text-gray-400 opacity-0 transition-all duration-150 hover:bg-red-50 hover:text-red-500 group-hover:opacity-100 active:scale-90"
-      title="删除会话"
-    >
-      <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    </button>
+      <button
+        @click.stop="$emit('delete')"
+        class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-[#484F58] opacity-0 transition-all duration-150 hover:bg-rose-500/10 hover:text-rose-400 group-hover:opacity-100 active:scale-90"
+        title="删除会话"
+      >
+        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
