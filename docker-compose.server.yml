@@ -50,6 +50,8 @@ services:
     # ⭐ 不暴露 5432, 内部访问
     volumes:
       - pgvector_data:/var/lib/postgresql/data
+      # 首次启动自动建 mc_ai_memory database
+      - ./pgvector-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -71,8 +73,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      pgvector:
-        condition: service_started
       rabbitmq:
         condition: service_started
     environment:
@@ -81,20 +81,43 @@ services:
       SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root123
-      SPRING_DATASOURCE_PGVECTOR_URL: 'jdbc:postgresql://pgvector:5432/wuwa_vectors'
-      SPRING_DATASOURCE_PGVECTOR_USERNAME: postgres
-      SPRING_DATASOURCE_PGVECTOR_PASSWORD: postgres
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      # ----- 转发到 Python AI 微服务 -----
+      PYTHON_AI_URL: http://python-ai:8001
       # ----- ⭐ 敏感密钥从 .env 文件读, 永远不入镜像 / 不入 git -----
-      ZHIPU_API_KEY: ${ZHIPU_API_KEY}
-      GITHUB_TOKEN: ${GITHUB_TOKEN}
-      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       JWT_SECRET: ${JWT_SECRET}
+
+  # ============================================================
+  # Python AI 微服务 — LangChain + LangGraph
+  # ============================================================
+  python-ai:
+    image: ghcr.io/nijikasuki/mc_recorder/python-ai:latest
+    container_name: mc_recorder-python-ai
+    restart: unless-stopped
+    # 内部 8001, 不暴露公网 (Java backend 内部调它)
+    depends_on:
+      pgvector:
+        condition: service_started
+      backend:
+        condition: service_started
+    environment:
+      # ----- LLM -----
+      LLM_API_KEY: ${LLM_API_KEY}
+      # ----- Postgres (Memory + RAG) -----
+      POSTGRES_URL: postgresql://postgres:postgres@pgvector:5432/mc_ai_memory
+      RAG_PG_URL: postgresql+psycopg://postgres:postgres@pgvector:5432/wuwa_vectors
+      # ----- 外部工具 -----
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      # ----- 调 Java internal -----
+      JAVA_BASE_URL: http://backend:8000
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
 
   frontend:
     image: ghcr.io/nijikasuki/mc_recorder/frontend:latest
