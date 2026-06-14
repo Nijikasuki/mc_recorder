@@ -53,14 +53,15 @@ services:
       # 首次启动自动建 mc_ai_memory database
       - ./pgvector-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq-wuwa
-    restart: unless-stopped
-    # ⭐ 5672 AMQP 协议不暴露 (后端容器内通信)
-    # 15672 管理 UI 暴露, 你需要可访问 http://你IP:15672 (账号 guest/guest)
-    ports:
-      - "15672:15672"
+  # ⏸️ 临时关掉 rabbitmq 省内存 (2GB ECS 不够 7 容器跑)
+  # 由于 register 端点 denyAll, 实际不会触发发邮件, 关了不影响
+  # 想恢复, 取消下面注释 + 同步 backend depends_on 也取消
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq-wuwa
+  #   restart: unless-stopped
+  #   ports:
+  #     - "15672:15672"
 
   backend:
     image: ghcr.io/nijikasuki/mc_recorder/backend:latest
@@ -73,10 +74,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-      rabbitmq:
-        condition: service_started
+      # rabbitmq:
+      #   condition: service_started
     environment:
-      JAVA_OPTS: "-Xms256m -Xmx512m"        # 限 JVM 堆内存
+      JAVA_OPTS: "-Xms256m -Xmx384m"        # 限 JVM 堆内存 (从 512 降到 384 再省 128MB)
       # ----- 基础设施配置 (写死) -----
       SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
       SPRING_DATASOURCE_USERNAME: root

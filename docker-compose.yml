@@ -63,15 +63,15 @@ services:
       - ./pgvector-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
 
   # ============================================================
-  # 服务 4: RabbitMQ — 消息队列
+  # 服务 4: RabbitMQ — 消息队列 (⏸️ 临时关掉省内存, 跟 server.yml 同步)
   # ============================================================
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq-wuwa
-    restart: unless-stopped
-    ports:
-      - "5672:5672"                # AMQP 协议端口 (后端连这个)
-      - "15672:15672"              # 管理 UI (浏览器看队列, guest/guest)
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq-wuwa
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
 
   # ============================================================
   # 服务 5: Backend — Spring Boot (HTTP 网关 + 业务)
@@ -89,8 +89,8 @@ services:
         condition: service_started
       pgvector:
         condition: service_started
-      rabbitmq:
-        condition: service_started
+      # rabbitmq:
+      #   condition: service_started
     environment:
       # ----- MySQL -----
       SPRING_DATASOURCE_URL: 'jdbc:mysql://mysql:3306/wuwa_record?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8'
