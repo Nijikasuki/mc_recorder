@@ -1,34 +1,74 @@
 package com.dy.mcrecorder.mc_recorder.controller;
 
-import com.dy.mcrecorder.mc_recorder.common.Result;
+import com.dy.mcrecorder.mc_recorder.dto.ChatRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Flux;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.io.IOException;
 
 /**
- * AI 助手控制器 — Phase 5 重构占位版
+ * AI 助手控制器 — HTTP 网关
  *
- * 状态: Java Spring AI 已移除, 等 Python 微服务 (LangGraph) 上线后,
- *       此 Controller 改成 HTTP 转发到 python_ai_service 服务
- *
- * 当前所有端点返回 "服务建设中" 占位响应, 前端 AI 助手页可正常加载但无法对话
+ * 把前端 AI 请求转发到 Python 微服务 (python_ai_service:8001).
+ * 注入 X-User-Id header 把 JWT 解析后的 user_id 透传给 Python 用于多用户隔离.
  */
 @RestController
 @RequestMapping("/api/ai")
-@Tag(name = "3. AI 助手 (Python 重构中)")
+@Tag(name = "3. AI 助手")
 public class AiController {
 
-    @PostMapping("/chat")
-    @Operation(summary = "AI 对话 (待 Python 服务)", description = "Phase 5 Python LangGraph 重构中")
-    public Result<String> chat(@RequestParam String message) {
-        return Result.fail(503, "AI 服务正在 Python LangGraph 重构中, 敬请期待");
+    private static final ParameterizedTypeReference<ServerSentEvent<String>> SSE_TYPE =
+            new ParameterizedTypeReference<>() {};
+
+    private final WebClient pythonClient;
+
+    public AiController(@Value("${python-ai.base-url}") String pythonBaseUrl) {
+        this.pythonClient = WebClient.builder()
+                .baseUrl(pythonBaseUrl)
+                .build();
     }
 
-    @PostMapping(value = "/chat-stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "AI 流式对话 (待 Python 服务)", description = "Phase 5 Python LangGraph 重构中")
-    public Flux<String> chatStream(@RequestParam String message) {
-        return Flux.just("AI 服务正在 Python LangGraph 重构中, 敬请期待 🚧");
+    @PostMapping("/chat-stream")
+    @Operation(summary = "AI 流式对话", description = "转发到 Python 微服务 (SSE 事件: token / node / done)")
+    public SseEmitter chatStream(
+            @RequestBody ChatRequest req,
+            @AuthenticationPrincipal Long userId
+    ) {
+        // SseEmitter: Spring MVC 原生 SSE 支持, 默认 UTF-8, 不会双重包装
+        // timeout 5 分钟 (LLM 长对话也够)
+        SseEmitter emitter = new SseEmitter(5 * 60_000L);
+
+        // 用 WebClient 拉 Python 端的 SSE 流 (结构化解析成 ServerSentEvent)
+        pythonClient.post()
+                .uri("/chat/stream")
+                .header("X-User-Id", String.valueOf(userId))   // ⭐ 注入 header
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(req)
+                .retrieve()
+                .bodyToFlux(SSE_TYPE)
+                .subscribe(
+                        sse -> {
+                            // 每个 SSE 事件透传给客户端 (用 SseEmitter 重新发送, 保持 event 类型和 data)
+                            try {
+                                String eventName = sse.event() != null ? sse.event() : "message";
+                                String data = sse.data() != null ? sse.data() : "";
+                                emitter.send(SseEmitter.event().name(eventName).data(data));
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
+                        },
+                        emitter::completeWithError,    // 错误回调
+                        emitter::complete              // 完成回调
+                );
+
+        return emitter;
     }
 }

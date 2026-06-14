@@ -42,3 +42,6 @@ kurobbs:
   server-id: 76402e5b20be2c39f095a152090afddc
   channel-id: 19
   country-code: 1
+
+internal:
+  token: ${INTERNAL_TOKEN:dev-internal-token-please-change-in-prod}

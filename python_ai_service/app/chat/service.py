@@ -11,6 +11,7 @@ async def chat(
     thread_id: str,
     enable_search: bool = False,
     enable_knowledge: bool = False,
+    user_id: str = "anonymous",
 ) -> str:
     """非流式: 等 LLM 完整答案返回."""
     config = {
@@ -18,6 +19,7 @@ async def chat(
             "thread_id": thread_id,
             "enable_search": enable_search,
             "enable_knowledge": enable_knowledge,
+            "user_id": user_id,    # ⭐ 业务工具能从 RunnableConfig 拿
         }
     }
     result = await graph_pkg.compiled_graph.ainvoke(
@@ -32,19 +34,28 @@ async def chat_stream(
     thread_id: str,
     enable_search: bool = False,
     enable_knowledge: bool = False,
-) -> AsyncIterator[str]:
-    """流式: 一个 token 一个 yield."""
+    user_id: str = "anonymous",
+) -> AsyncIterator[tuple[str, str]]:
+    """流式: yield (event_type, payload) 元组."""
     config = {
         "configurable": {
             "thread_id": thread_id,
             "enable_search": enable_search,
             "enable_knowledge": enable_knowledge,
+            "user_id": user_id,    # ⭐ 业务工具能从 RunnableConfig 拿
         }
     }
-    async for chunk, _metadata in graph_pkg.compiled_graph.astream(
+    async for mode, chunk in graph_pkg.compiled_graph.astream(
         {"messages": [("human", user_msg)]},
         config=config,
-        stream_mode="messages",
+        stream_mode=["messages", "updates"],
     ):
-        if isinstance(chunk, AIMessageChunk) and chunk.content:
-            yield chunk.content
+        if mode == "messages":
+            # chunk 是 (AIMessageChunk, metadata) 元组
+            msg_chunk, _meta = chunk
+            if isinstance(msg_chunk, AIMessageChunk) and msg_chunk.content:
+                yield ("token", msg_chunk.content)
+        elif mode == "updates":
+            # chunk 是 dict {"node_name": {state 更新字段}}
+            for node_name in chunk:
+                yield ("node", node_name)

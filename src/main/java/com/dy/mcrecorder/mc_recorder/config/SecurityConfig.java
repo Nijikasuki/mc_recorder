@@ -69,6 +69,8 @@ public class SecurityConfig {
                 // 路径规则：注册/登录放行，其余都要认证
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ASYNC, DispatcherType.ERROR).permitAll()
+                        // 内部接口: 给 Python AI 微服务调用, 不走 JWT, 走 X-Internal-Token 校验 (在 controller 手写)
+                        .requestMatchers("/api/internal/**").permitAll()
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/register").denyAll()
                         .requestMatchers("/api/auth/**").permitAll()

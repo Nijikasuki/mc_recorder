@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     rag_pg_url: str
     embedding_model: str = "embedding-3"
 
+    # ========== 跨服务调用 Java (节 8-B) ==========
+    java_base_url: str = "http://localhost:8000"
+    internal_token: str
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

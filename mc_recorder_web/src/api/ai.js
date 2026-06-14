@@ -1,47 +1,67 @@
 import api from './index'
 
-export function sendChat(message){
-    return api.post('/ai/chat',null,{params:{ message }})
+export function sendChat(message) {
+    return api.post('/ai/chat', null, { params: { message } })
 }
 
-// ⭐  新增: 流式版本
-// 不能用 axios(它不支持流式响应), 用浏览器原生 fetch
-export async function streamChat(message, onChunk, signal) {
+/**
+ * 流式聊天 (SSE 自定义事件类型: token / node / done)
+ *
+ * 不能用 axios (不支持流式), 用浏览器原生 fetch + ReadableStream.
+ *
+ * @param req         { message, conversation_id, enable_search, enable_knowledge }
+ * @param callbacks   { onToken, onNode, onDone }
+ * @param signal      AbortController.signal
+ */
+export async function streamChat(req, callbacks, signal) {
     const token = localStorage.getItem('token')
-    // 用相对路径, 让 vite proxy / Nginx 转发, 不写死 localhost
-    const url = `/api/ai/chat-stream?message=${encodeURIComponent(message)}`
 
-    const response = await fetch(url, {
+    const response = await fetch('/api/ai/chat-stream', {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
         },
-        signal,    // ⭐ AbortController.signal, 用于取消请求
+        body: JSON.stringify(req),
+        signal,
     })
 
     if (!response.ok) {
         throw new Error('请求失败: ' + response.status)
     }
 
-    // 读取流式响应
     const reader = response.body.getReader()
-    const decoder = new TextDecoder()
+    const decoder = new TextDecoder('utf-8')
+
+    let buffer = ''
+    let currentEvent = 'message'
 
     while (true) {
         const { done, value } = await reader.read()
         if (done) break
 
-        const chunk = decoder.decode(value, { stream: true })
+        buffer += decoder.decode(value, { stream: true })
 
-        // SSE 格式: 每行是 "data:内容\n", 解析出来
-        const lines = chunk.split('\n')
+        // SSE 协议按 \n 分行解析
+        const lines = buffer.split('\n')
+        buffer = lines.pop()    // 最后一行可能不完整, 留到下次
+
         for (const line of lines) {
-            if (line.startsWith('data:')) {
-                const data = line.slice(5)    // 去掉 "data:" 前缀
-                if (data) {
-                    onChunk(data)                // 回调通知页面"来了一小段"
+            if (line.startsWith('event:')) {
+                currentEvent = line.slice(6).trim()
+            } else if (line.startsWith('data:')) {
+                // 去掉 "data:" 前缀 + 可选前导空格
+                const data = line.slice(5).replace(/^ /, '')
+
+                if (currentEvent === 'token') {
+                    callbacks.onToken?.(data)
+                } else if (currentEvent === 'node') {
+                    callbacks.onNode?.(data)
+                } else if (currentEvent === 'done') {
+                    callbacks.onDone?.()
                 }
             }
+            // 空行 = 一个 SSE 事件结束, currentEvent 保留到下个 event: 行
         }
     }
 }
