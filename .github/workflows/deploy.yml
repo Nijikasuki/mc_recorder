@@ -33,11 +33,11 @@ jobs:
     steps:
       # ----- 1. checkout 代码 -----
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # ----- 2. 登录 ghcr.io -----
       - name: Login to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -45,11 +45,11 @@ jobs:
 
       # ----- 3. 设置 Docker buildx -----
       - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       # ----- 4. 构建 + 推 backend 镜像 -----
       - name: Build and push backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
@@ -60,7 +60,7 @@ jobs:
 
       # ----- 5. 构建 + 推 frontend 镜像 -----
       - name: Build and push frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile.frontend
@@ -71,7 +71,7 @@ jobs:
 
       # ----- 6. 构建 + 推 python-ai 镜像 -----
       - name: Build and push python-ai
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: python_ai_service
           file: python_ai_service/Dockerfile
