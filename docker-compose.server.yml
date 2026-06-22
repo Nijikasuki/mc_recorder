@@ -64,7 +64,7 @@ services:
   #     - "15672:15672"
 
   backend:
-    image: ghcr.io/nijikasuki/mc_recorder/backend:latest
+    image: ghcr.nju.edu.cn/nijikasuki/mc_recorder/backend:latest
     container_name: mc_recorder-backend
     restart: unless-stopped
     ports:
@@ -100,7 +100,7 @@ services:
   # Python AI 微服务 — LangChain + LangGraph
   # ============================================================
   python-ai:
-    image: ghcr.io/nijikasuki/mc_recorder/python-ai:latest
+    image: ghcr.nju.edu.cn/nijikasuki/mc_recorder/python-ai:latest
     container_name: mc_recorder-python-ai
     restart: unless-stopped
     # 内部 8001, 不暴露公网 (Java backend 内部调它)
@@ -123,7 +123,7 @@ services:
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
 
   frontend:
-    image: ghcr.io/nijikasuki/mc_recorder/frontend:latest
+    image: ghcr.nju.edu.cn/nijikasuki/mc_recorder/frontend:latest
     container_name: mc_recorder-frontend
     restart: unless-stopped
     ports:
