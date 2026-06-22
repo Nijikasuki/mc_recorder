@@ -44,3 +44,5 @@ application-local.yaml
 NOTES.md
 CLAUDE.md
 .claude/
+.agents
+AGENTS.md

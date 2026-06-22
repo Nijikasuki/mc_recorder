@@ -88,6 +88,8 @@ services:
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      SPRING_RABBITMQ_LISTENER_SIMPLE_AUTO_STARTUP: false
+      SPRING_RABBITMQ_LISTENER_DIRECT_AUTO_STARTUP: false
       # ----- 转发到 Python AI 微服务 -----
       PYTHON_AI_URL: http://python-ai:8001
       # ----- ⭐ 敏感密钥从 .env 文件读, 永远不入镜像 / 不入 git -----
